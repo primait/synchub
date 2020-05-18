@@ -13,7 +13,7 @@ func main() {
 	app.Usage = "keep github in sync!"
 	app.Commands = commands()
 	app.Flags = flags()
-	
+
 	err := app.Run(os.Args)
 	if err != nil {
 		log.Fatal(err)
@@ -23,29 +23,29 @@ func main() {
 func commands() []*cli.Command {
 	return []*cli.Command{
 		{
-			Name: "sync",
+			Name:            "sync",
 			SkipFlagParsing: false,
-			Aliases: []string{"s"},
-			Usage: "specify yml file(s) to sync",
-			Action: runSync,
+			Aliases:         []string{"s"},
+			Usage:           "specify yml file(s) to sync",
+			Action:          runSync,
 		},
 	}
 }
 
 func flags() []cli.Flag {
-	return []cli.Flag {
+	return []cli.Flag{
 		&cli.BoolFlag{
-		  Name: "verbose",
-		  Aliases: []string{"vvv"},
+			Name:    "verbose",
+			Aliases: []string{"vvv"},
 		},
 		&cli.StringFlag{
-			Name: "token",
-			Usage: "github token",
+			Name:     "token",
+			Usage:    "github token",
 			Required: true,
-			EnvVars: []string{"GITHUB_TOKEN"},
-			Aliases: []string{"t"},
+			EnvVars:  []string{"GITHUB_TOKEN"},
+			Aliases:  []string{"t"},
 		},
-	  }
+	}
 }
 
 func runSync(c *cli.Context) error {
