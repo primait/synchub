@@ -9,7 +9,7 @@ import (
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "fizz"
+	app.Name = "synchub"
 	app.Usage = "keep github in sync!"
 	app.Commands = commands()
 	app.Flags = flags()
