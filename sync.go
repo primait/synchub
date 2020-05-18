@@ -49,6 +49,8 @@ func Sync(files []string, verbose bool, token string) {
 
 		for _, org := range obj.Organizations {
 			logIfVerbose(fmt.Sprintf("Sync organization %s...", org.Name))
+			syncOrgTeams(org)
+
 			for _, orgRepo := range org.Repositories {
 				logIfVerbose(fmt.Sprintf("Sync repo %s on organization %s...", orgRepo.Name, org.Name))
 				appendBaseToRepo(&orgRepo, parsedFiles)

@@ -33,9 +33,9 @@ type branch struct {
 }
 
 type protection struct {
-	RequiredStatusChecks       *statusCheck       `yaml:"required_status_checks"`
-	RequiredPullRequestReviews *requiredReviews   `yaml:"required_pull_request_reviews"`
-	Restrictions               *branchRestriction `yaml:"restrictions,omitempty"`
+	RequiredStatusChecks       *statusCheck      `yaml:"required_status_checks"`
+	RequiredPullRequestReviews *requiredReviews  `yaml:"required_pull_request_reviews"`
+	Restrictions               branchRestriction `yaml:"restrictions,omitempty"`
 
 	EnforceAdmins        *bool `yaml:"enforce_admins"`
 	RequireLinearHistory *bool `yaml:"required_linear_history"`
@@ -55,9 +55,9 @@ type requiredReviews struct {
 }
 
 type branchRestriction struct {
-	Apps  []string `yaml:"apps,omitempty"`
-	Users []string `yaml:"users,omitempty"`
-	Teams []string `yaml:"teams,omitempty"`
+	Apps  *[]string `yaml:"apps,omitempty"`
+	Users *[]string `yaml:"users,omitempty"`
+	Teams *[]string `yaml:"teams,omitempty"`
 }
 
 func appendBaseToRepo(repo *repository, parsedFiles []*file) {
@@ -117,7 +117,7 @@ func syncBranch(repo string, org string, branches []branch) {
 
 		// Restrictions
 		c := github.BranchRestrictionsRequest{}
-		parseBranchRestriction(&c, branch.Protection.Restrictions, org)
+		copier.Copy(&c, &branch.Protection.Restrictions)
 
 		t := github.ProtectionRequest{RequiredStatusChecks: &a, RequiredPullRequestReviews: &b, Restrictions: &c}
 		copier.Copy(&t, &branch.Protection)
@@ -129,19 +129,5 @@ func syncBranch(repo string, org string, branches []branch) {
 		if err != nil {
 			log.Fatal(err)
 		}
-	}
-}
-
-func parseBranchRestriction(b *github.BranchRestrictionsRequest, o *branchRestriction, org string) {
-	if len(b.Users) > 0 {
-		b.Users = o.Users
-	}
-
-	if len(b.Apps) > 0 {
-		b.Apps = o.Apps
-	}
-
-	if len(b.Teams) > 0 {
-		b.Teams = o.Teams
 	}
 }

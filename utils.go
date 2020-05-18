@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"regexp"
+	"strings"
 )
 
 func askForConfirmation() bool {
@@ -34,4 +36,9 @@ func posString(slice []string, element string) int {
 
 func containsString(slice []string, element string) bool {
 	return !(posString(slice, element) == -1)
+}
+
+func slug(s string) string {
+	re := regexp.MustCompile("[^a-z0-9]+")
+	return strings.Trim(re.ReplaceAllString(strings.ToLower(s), "-"), "-")
 }
