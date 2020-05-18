@@ -1,27 +1,27 @@
 package main
 
 import (
-    "log"
-    "fmt"
+	"fmt"
+	"log"
 
-    //"encoding/json"
+	//"encoding/json"
 
-    "github.com/imdario/mergo"
-    "github.com/google/go-github/v31/github"
-    "github.com/jinzhu/copier"
+	"github.com/google/go-github/v31/github"
+	"github.com/imdario/mergo"
+	"github.com/jinzhu/copier"
 )
 
 type Repository struct {
-    Name string `yaml:"name"`
-    Description string `yaml:"description"`
-	Private bool `yaml:"private"`
-	HasIssues bool `yaml:"has_issues"`
-	HasWiki bool `yaml:"has_wiki"`
-	HasPages bool `yaml:"has_pages"`
-	HasProjects bool `yaml:"has_projects"`
-    HasDownloads bool `yaml:"has_downloads"`
+	Name         string `yaml:"name"`
+	Description  string `yaml:"description"`
+	Private      bool   `yaml:"private"`
+	HasIssues    bool   `yaml:"has_issues"`
+	HasWiki      bool   `yaml:"has_wiki"`
+	HasPages     bool   `yaml:"has_pages"`
+	HasProjects  bool   `yaml:"has_projects"`
+	HasDownloads bool   `yaml:"has_downloads"`
 
-    Branches []Branch `yaml:"branches"`
+	Branches []Branch `yaml:"branches"`
 
 	InheritFrom string `yaml:"inherit_from"`
 }
@@ -29,119 +29,119 @@ type Repository struct {
 type Branch struct {
 	Name string `yaml:"name"`
 
-    Protection Protection `yaml:"protection"`
+	Protection Protection `yaml:"protection"`
 }
 
 type Protection struct {
-    RequiredStatusChecks *StatusCheck `yaml:"required_status_checks"`
-    RequiredPullRequestReviews *RequiredReviews `yaml:"required_pull_request_reviews"`
-    Restrictions *BranchRestriction `yaml:"restrictions,omitempty"`
+	RequiredStatusChecks       *StatusCheck       `yaml:"required_status_checks"`
+	RequiredPullRequestReviews *RequiredReviews   `yaml:"required_pull_request_reviews"`
+	Restrictions               *BranchRestriction `yaml:"restrictions,omitempty"`
 
-    EnforceAdmins *bool `yaml:"enforce_admins"`
-    RequireLinearHistory *bool `yaml:"required_linear_history"`
-	AllowForcePushes *bool `yaml:"allow_force_pushes"`
-	AllowDeletions *bool `yaml:"allow_deletions"`
+	EnforceAdmins        *bool `yaml:"enforce_admins"`
+	RequireLinearHistory *bool `yaml:"required_linear_history"`
+	AllowForcePushes     *bool `yaml:"allow_force_pushes"`
+	AllowDeletions       *bool `yaml:"allow_deletions"`
 }
 
 type StatusCheck struct {
-    Strict *bool `yaml:"strict"`
+	Strict   *bool     `yaml:"strict"`
 	Contexts *[]string `yaml:"contexts"`
 }
 
 type RequiredReviews struct {
-	DismissStaleReviews *bool `yaml:"dismiss_stale_reviews"`
-	RequireCodeOwnerReviews *bool `yaml:"require_code_owner_reviews"`
-	RequiredApprovingReviewCount *int `yaml:"required_approving_review_count"`
+	DismissStaleReviews          *bool `yaml:"dismiss_stale_reviews"`
+	RequireCodeOwnerReviews      *bool `yaml:"require_code_owner_reviews"`
+	RequiredApprovingReviewCount *int  `yaml:"required_approving_review_count"`
 }
 
 type BranchRestriction struct {
-    Apps []string `yaml:"apps,omitempty"`
-    Users []string `yaml:"users,omitempty"`
+	Apps  []string `yaml:"apps,omitempty"`
+	Users []string `yaml:"users,omitempty"`
 	Teams []string `yaml:"teams,omitempty"`
 }
 
 func AppendBaseToRepo(repo *Repository, parsedFiles []*File) {
-    if repo.InheritFrom != "" {
-        var d *Base
-        I:
-            for _, obj := range parsedFiles {
-                for _, base := range obj.Bases {
-                    if repo.InheritFrom == base.Name {
-                        d = &base
-                        break I
-                    }
-                }
-            }
-        if d == nil {
-            log.Fatalf("Error searching \"%s\" base defined in %s repo", repo.InheritFrom, repo.Name)
+	if repo.InheritFrom != "" {
+		var d *Base
+	I:
+		for _, obj := range parsedFiles {
+			for _, base := range obj.Bases {
+				if repo.InheritFrom == base.Name {
+					d = &base
+					break I
+				}
+			}
 		}
-        if err := mergo.Merge(repo, d.Repository, mergo.WithOverride); err != nil {
-            log.Fatalf("An error occurred: %v", err)
+		if d == nil {
+			log.Fatalf("Error searching \"%s\" base defined in %s repo", repo.InheritFrom, repo.Name)
 		}
-    }
+		if err := mergo.Merge(repo, d.Repository, mergo.WithOverride); err != nil {
+			log.Fatalf("An error occurred: %v", err)
+		}
+	}
 }
 
 func ProcessRepo(repo Repository, org string) {
-    t := github.Repository{}
-    copier.Copy(&t, &repo)
-    _, resp, err := editRepo(org, &t)
+	t := github.Repository{}
+	copier.Copy(&t, &repo)
+	_, resp, err := editRepo(org, &t)
 	if err != nil && resp.StatusCode == 404 {
-        fmt.Printf("Oh-oh! %s does not exist on Github. Do you want to create it? [y/n]: ", repo.Name)
-        if AskForConfirmation() {
-            _, _, err := createRepo(org, &t)
-            if err != nil {
-                log.Fatal(err)
-            }
-            logIfVerbose(fmt.Sprintf("Successfully updated repo: %v\n", repo.Name))
-        }
+		fmt.Printf("Oh-oh! %s does not exist on Github. Do you want to create it? [y/n]: ", repo.Name)
+		if AskForConfirmation() {
+			_, _, err := createRepo(org, &t)
+			if err != nil {
+				log.Fatal(err)
+			}
+			logIfVerbose(fmt.Sprintf("Successfully updated repo: %v\n", repo.Name))
+		}
 	} else if err != nil {
-        log.Fatal(err)
-    } else {
-        logIfVerbose(fmt.Sprintf("Successfully updated repo: %v\n", repo.Name))
-    }
+		log.Fatal(err)
+	} else {
+		logIfVerbose(fmt.Sprintf("Successfully updated repo: %v\n", repo.Name))
+	}
 
-    syncBranch(repo.Name, org, repo.Branches)
+	syncBranch(repo.Name, org, repo.Branches)
 }
 
 func syncBranch(repo string, org string, branches []Branch) {
-    for _, branch := range branches {
-        logIfVerbose(fmt.Sprintf("Sync branch %s on repo %s\n", branch.Name, repo))
+	for _, branch := range branches {
+		logIfVerbose(fmt.Sprintf("Sync branch %s on repo %s\n", branch.Name, repo))
 
-        // RequiredStatusChecks
-        a := github.RequiredStatusChecks{}
-        copier.Copy(&a, &branch.Protection.RequiredStatusChecks)
+		// RequiredStatusChecks
+		a := github.RequiredStatusChecks{}
+		copier.Copy(&a, &branch.Protection.RequiredStatusChecks)
 
-        // RequiredPullRequestReviews
-        b := github.PullRequestReviewsEnforcementRequest{}
-        copier.Copy(&b, &branch.Protection.RequiredPullRequestReviews)
+		// RequiredPullRequestReviews
+		b := github.PullRequestReviewsEnforcementRequest{}
+		copier.Copy(&b, &branch.Protection.RequiredPullRequestReviews)
 
-        // Restrictions
-        c := github.BranchRestrictionsRequest{}
-        parseBranchRestriction(&c, branch.Protection.Restrictions, org)
+		// Restrictions
+		c := github.BranchRestrictionsRequest{}
+		parseBranchRestriction(&c, branch.Protection.Restrictions, org)
 
-        t := github.ProtectionRequest{RequiredStatusChecks: &a, RequiredPullRequestReviews: &b, Restrictions: &c}
-        copier.Copy(&t, &branch.Protection)
+		t := github.ProtectionRequest{RequiredStatusChecks: &a, RequiredPullRequestReviews: &b, Restrictions: &c}
+		copier.Copy(&t, &branch.Protection)
 
-        // js, _ := json.Marshal(t)
-        // fmt.Println(string(js))
+		// js, _ := json.Marshal(t)
+		// fmt.Println(string(js))
 
-        _, _, err := editRepoBranches(org, repo, branch.Name, &t)
-        if err != nil {
-            log.Fatal(err)
-        }
-    }
+		_, _, err := editRepoBranches(org, repo, branch.Name, &t)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 }
 
 func parseBranchRestriction(b *github.BranchRestrictionsRequest, o *BranchRestriction, org string) {
-    if len(b.Users) > 0 {
-        b.Users = o.Users
-    }
+	if len(b.Users) > 0 {
+		b.Users = o.Users
+	}
 
-    if len(b.Apps) > 0 {
-        b.Apps = o.Apps
-    }
+	if len(b.Apps) > 0 {
+		b.Apps = o.Apps
+	}
 
-    if len(b.Teams) > 0 {
-        b.Teams = o.Teams
-    }
+	if len(b.Teams) > 0 {
+		b.Teams = o.Teams
+	}
 }
