@@ -11,7 +11,7 @@ import (
 	"github.com/jinzhu/copier"
 )
 
-type Repository struct {
+type repository struct {
 	Name         string `yaml:"name"`
 	Description  string `yaml:"description"`
 	Private      bool   `yaml:"private"`
@@ -21,21 +21,21 @@ type Repository struct {
 	HasProjects  bool   `yaml:"has_projects"`
 	HasDownloads bool   `yaml:"has_downloads"`
 
-	Branches []Branch `yaml:"branches"`
+	Branches []branch `yaml:"branches"`
 
 	InheritFrom string `yaml:"inherit_from"`
 }
 
-type Branch struct {
+type branch struct {
 	Name string `yaml:"name"`
 
-	Protection Protection `yaml:"protection"`
+	Protection protection `yaml:"protection"`
 }
 
-type Protection struct {
-	RequiredStatusChecks       *StatusCheck       `yaml:"required_status_checks"`
-	RequiredPullRequestReviews *RequiredReviews   `yaml:"required_pull_request_reviews"`
-	Restrictions               *BranchRestriction `yaml:"restrictions,omitempty"`
+type protection struct {
+	RequiredStatusChecks       *statusCheck       `yaml:"required_status_checks"`
+	RequiredPullRequestReviews *requiredReviews   `yaml:"required_pull_request_reviews"`
+	Restrictions               *branchRestriction `yaml:"restrictions,omitempty"`
 
 	EnforceAdmins        *bool `yaml:"enforce_admins"`
 	RequireLinearHistory *bool `yaml:"required_linear_history"`
@@ -43,26 +43,26 @@ type Protection struct {
 	AllowDeletions       *bool `yaml:"allow_deletions"`
 }
 
-type StatusCheck struct {
+type statusCheck struct {
 	Strict   *bool     `yaml:"strict"`
 	Contexts *[]string `yaml:"contexts"`
 }
 
-type RequiredReviews struct {
+type requiredReviews struct {
 	DismissStaleReviews          *bool `yaml:"dismiss_stale_reviews"`
 	RequireCodeOwnerReviews      *bool `yaml:"require_code_owner_reviews"`
 	RequiredApprovingReviewCount *int  `yaml:"required_approving_review_count"`
 }
 
-type BranchRestriction struct {
+type branchRestriction struct {
 	Apps  []string `yaml:"apps,omitempty"`
 	Users []string `yaml:"users,omitempty"`
 	Teams []string `yaml:"teams,omitempty"`
 }
 
-func AppendBaseToRepo(repo *Repository, parsedFiles []*File) {
+func appendBaseToRepo(repo *repository, parsedFiles []*file) {
 	if repo.InheritFrom != "" {
-		var d *Base
+		var d *base
 	I:
 		for _, obj := range parsedFiles {
 			for _, base := range obj.Bases {
@@ -81,13 +81,13 @@ func AppendBaseToRepo(repo *Repository, parsedFiles []*File) {
 	}
 }
 
-func ProcessRepo(repo Repository, org string) {
+func processRepo(repo repository, org string) {
 	t := github.Repository{}
 	copier.Copy(&t, &repo)
 	_, resp, err := editRepo(org, &t)
 	if err != nil && resp.StatusCode == 404 {
 		fmt.Printf("Oh-oh! %s does not exist on Github. Do you want to create it? [y/n]: ", repo.Name)
-		if AskForConfirmation() {
+		if askForConfirmation() {
 			_, _, err := createRepo(org, &t)
 			if err != nil {
 				log.Fatal(err)
@@ -103,7 +103,7 @@ func ProcessRepo(repo Repository, org string) {
 	syncBranch(repo.Name, org, repo.Branches)
 }
 
-func syncBranch(repo string, org string, branches []Branch) {
+func syncBranch(repo string, org string, branches []branch) {
 	for _, branch := range branches {
 		logIfVerbose(fmt.Sprintf("Sync branch %s on repo %s\n", branch.Name, repo))
 
@@ -132,7 +132,7 @@ func syncBranch(repo string, org string, branches []Branch) {
 	}
 }
 
-func parseBranchRestriction(b *github.BranchRestrictionsRequest, o *BranchRestriction, org string) {
+func parseBranchRestriction(b *github.BranchRestrictionsRequest, o *branchRestriction, org string) {
 	if len(b.Users) > 0 {
 		b.Users = o.Users
 	}

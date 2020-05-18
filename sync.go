@@ -17,13 +17,14 @@ var (
 	currentUser string
 	ctx         = context.Background()
 	client      *github.Client
-	bases       []Base
+	bases       []base
 )
 
+// Sync function parse and process yaml file(s)
 func Sync(files []string, verbose bool, token string) {
 	v = verbose
 	client = newGithubClient(token)
-	var parsedFiles []*File
+	var parsedFiles []*file
 
 	u, _, err := client.Users.Get(ctx, "")
 	if err != nil {
@@ -32,7 +33,7 @@ func Sync(files []string, verbose bool, token string) {
 	currentUser = *u.Login
 
 	for _, arg := range files {
-		f := new(File)
+		f := new(file)
 		f.Filename = path.Base(arg)
 		parsedFiles = append(parsedFiles, f.getFile(arg))
 	}
@@ -42,16 +43,16 @@ func Sync(files []string, verbose bool, token string) {
 
 		for _, repo := range obj.Repositories {
 			logIfVerbose(fmt.Sprintf("Sync repo %s...", repo.Name))
-			AppendBaseToRepo(&repo, parsedFiles)
-			ProcessRepo(repo, "")
+			appendBaseToRepo(&repo, parsedFiles)
+			processRepo(repo, "")
 		}
 
 		for _, org := range obj.Organizations {
 			logIfVerbose(fmt.Sprintf("Sync organization %s...", org.Name))
 			for _, orgRepo := range org.Repositories {
 				logIfVerbose(fmt.Sprintf("Sync repo %s on organization %s...", orgRepo.Name, org.Name))
-				AppendBaseToRepo(&orgRepo, parsedFiles)
-				ProcessRepo(orgRepo, org.Name)
+				appendBaseToRepo(&orgRepo, parsedFiles)
+				processRepo(orgRepo, org.Name)
 			}
 		}
 
@@ -76,7 +77,7 @@ func editRepoBranches(org string, repo string, branch string, t *github.Protecti
 	return client.Repositories.UpdateBranchProtection(ctx, org, repo, branch, t)
 }
 
-func (f *File) getFile(filePath string) *File {
+func (f *file) getFile(filePath string) *file {
 	yamlFile, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)

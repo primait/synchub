@@ -1,6 +1,6 @@
 package main
 
-type Organization struct {
+type organization struct {
 	Name         string `yaml:"name"`
-	Repositories []Repository
+	Repositories []repository
 }

@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-func AskForConfirmation() bool {
+func askForConfirmation() bool {
 	var response string
 	_, err := fmt.Scanln(&response)
 	if err != nil {
@@ -19,7 +19,7 @@ func AskForConfirmation() bool {
 		return false
 	} else {
 		fmt.Println("Please type yes or no and then press enter:")
-		return AskForConfirmation()
+		return askForConfirmation()
 	}
 }
 

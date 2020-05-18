@@ -1,13 +1,13 @@
 package main
 
-type File struct {
+type file struct {
 	Filename      string
-	Organizations []Organization `yaml:"organizations"`
-	Repositories  []Repository   `yaml:"repositories"`
-	Bases         []Base         `yaml:"bases"`
+	Organizations []organization `yaml:"organizations"`
+	Repositories  []repository   `yaml:"repositories"`
+	Bases         []base         `yaml:"bases"`
 }
 
-type Base struct {
+type base struct {
 	Name       string     `yaml:"name"`
-	Repository Repository `yaml:"repository"`
+	Repository repository `yaml:"repository"`
 }
