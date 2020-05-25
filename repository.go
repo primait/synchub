@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	//"encoding/json"
-
 	"github.com/google/go-github/v31/github"
 	"github.com/imdario/mergo"
 	"github.com/jinzhu/copier"
@@ -121,9 +119,6 @@ func syncBranch(repo string, org string, branches []branch) {
 
 		t := github.ProtectionRequest{RequiredStatusChecks: &a, RequiredPullRequestReviews: &b, Restrictions: &c}
 		copier.Copy(&t, &branch.Protection)
-
-		// js, _ := json.Marshal(t)
-		// fmt.Println(string(js))
 
 		_, _, err := editRepoBranches(org, repo, branch.Name, &t)
 		if err != nil {
