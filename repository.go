@@ -120,10 +120,6 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 
 func syncBranch(repo string, org string, branches []branch) {
 	for _, branch := range branches {
-		if org == "" {
-			org = currentUser
-		}
-
 		logIfVerbose(fmt.Sprintf("Sync branch %s on repo %s\n", branch.Name, repo))
 
 		// RequiredStatusChecks
@@ -152,10 +148,6 @@ func syncCollaborators(repo string, org string, collaborators []collaborator) {
 	logIfVerbose(fmt.Sprintf("Sync collaborators on repo %s\n", repo))
 	for _, collaborator := range collaborators {
 		logIfVerbose(fmt.Sprintf("%s added as collaborator on repo %s\n", collaborator.Name, repo))
-
-		if org == "" {
-			org = currentUser
-		}
 
 		opts := github.RepositoryAddCollaboratorOptions{
 			Permission: collaborator.Permission,
