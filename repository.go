@@ -21,6 +21,8 @@ type repository struct {
 
 	Branches []branch `yaml:"branches"`
 
+	Collaborators []collaborator `yaml:"collaborators"`
+
 	InheritFrom string `yaml:"inherit_from"`
 }
 
@@ -56,6 +58,11 @@ type branchRestriction struct {
 	Apps  *[]string `yaml:"apps,omitempty"`
 	Users *[]string `yaml:"users,omitempty"`
 	Teams *[]string `yaml:"teams,omitempty"`
+}
+
+type collaborator struct {
+	Name       string `yaml:"name"`
+	Permission string `yaml:"permission"`
 }
 
 func appendBaseToRepo(repo *repository, parsedFiles []*file) {
@@ -104,6 +111,7 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 	}
 
 	syncBranch(repo.Name, org, repo.Branches)
+	syncCollaborators(repo.Name, org, repo.Collaborators)
 }
 
 func syncBranch(repo string, org string, branches []branch) {
@@ -126,6 +134,26 @@ func syncBranch(repo string, org string, branches []branch) {
 		copier.Copy(&t, &branch.Protection)
 
 		_, _, err := editRepoBranches(org, repo, branch.Name, &t)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func syncCollaborators(repo string, org string, collaborators []collaborator) {
+	logIfVerbose(fmt.Sprintf("Sync collaborators on repo %s\n", repo))
+	for _, collaborator := range collaborators {
+		logIfVerbose(fmt.Sprintf("%s added as collaborator on repo %s\n", collaborator.Name, repo))
+
+		if org == "" {
+			org = currentUser
+		}
+
+		opts := github.RepositoryAddCollaboratorOptions{
+			Permission: collaborator.Permission,
+		}
+
+		_, _, err := client.Repositories.AddCollaborator(ctx, org, repo, collaborator.Name, &opts)
 		if err != nil {
 			log.Fatal(err)
 		}
