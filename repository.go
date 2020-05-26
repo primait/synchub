@@ -79,13 +79,18 @@ func appendBaseToRepo(repo *repository, parsedFiles []*file) {
 	}
 }
 
-func processRepo(repo repository, org string) {
+func processRepo(repo repository, org string, confirmPublic bool) {
 	t := github.Repository{}
 	copier.Copy(&t, &repo)
+
+	// if repo is public e confirmation is enabled via `--confirm-public` show prompt to confirm
+	if !repo.Private && confirmPublic && !askForConfirmation(fmt.Sprintf("Repository %s will be set public. Are you sure? [y/n]: ", repo.Name)) {
+		return
+	}
+
 	_, resp, err := editRepo(org, &t)
 	if err != nil && resp.StatusCode == 404 {
-		fmt.Printf("Oh-oh! %s does not exist on Github. Do you want to create it? [y/n]: ", repo.Name)
-		if askForConfirmation() {
+		if askForConfirmation(fmt.Sprintf("Oh-oh! %s does not exist on Github. Do you want to create it? [y/n]: ", repo.Name)) {
 			_, _, err := createRepo(org, &t)
 			if err != nil {
 				log.Fatal(err)

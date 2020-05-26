@@ -51,7 +51,7 @@ func (s *Sync) Exec() {
 		for _, repo := range obj.Repositories {
 			logIfVerbose(fmt.Sprintf("Sync repo %s...", repo.Name))
 			appendBaseToRepo(&repo, parsedFiles)
-			processRepo(repo, "")
+			processRepo(repo, "", s.confirmPublic)
 		}
 
 		for _, org := range obj.Organizations {
@@ -61,7 +61,7 @@ func (s *Sync) Exec() {
 			for _, orgRepo := range org.Repositories {
 				logIfVerbose(fmt.Sprintf("Sync repo %s on organization %s...", orgRepo.Name, org.Name))
 				appendBaseToRepo(&orgRepo, parsedFiles)
-				processRepo(orgRepo, org.Name)
+				processRepo(orgRepo, org.Name, s.confirmPublic)
 			}
 		}
 

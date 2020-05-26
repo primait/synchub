@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-func askForConfirmation() bool {
+func askForConfirmation(message string) bool {
+	fmt.Println(message)
 	var response string
 	_, err := fmt.Scanln(&response)
 	if err != nil {
@@ -21,7 +22,7 @@ func askForConfirmation() bool {
 		return false
 	} else {
 		fmt.Println("Please type yes or no and then press enter:")
-		return askForConfirmation()
+		return askForConfirmation(message)
 	}
 }
 
