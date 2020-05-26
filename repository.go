@@ -95,10 +95,14 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 		return
 	}
 
-	_, resp, err := editRepo(org, &t)
+	if org == "" {
+		org = currentUser
+	}
+
+	_, resp, err := client.Repositories.Edit(ctx, org, *t.Name, &t)
 	if err != nil && resp.StatusCode == 404 {
 		if askForConfirmation(fmt.Sprintf("Oh-oh! %s does not exist on Github. Do you want to create it? [y/n]: ", repo.Name)) {
-			_, _, err := createRepo(org, &t)
+			_, _, err := client.Repositories.Create(ctx, org, &t)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -116,6 +120,10 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 
 func syncBranch(repo string, org string, branches []branch) {
 	for _, branch := range branches {
+		if org == "" {
+			org = currentUser
+		}
+
 		logIfVerbose(fmt.Sprintf("Sync branch %s on repo %s\n", branch.Name, repo))
 
 		// RequiredStatusChecks
@@ -133,7 +141,7 @@ func syncBranch(repo string, org string, branches []branch) {
 		t := github.ProtectionRequest{RequiredStatusChecks: &a, RequiredPullRequestReviews: &b, Restrictions: &c}
 		copier.Copy(&t, &branch.Protection)
 
-		_, _, err := editRepoBranches(org, repo, branch.Name, &t)
+		_, _, err := client.Repositories.UpdateBranchProtection(ctx, org, repo, branch.Name, &t)
 		if err != nil {
 			log.Fatal(err)
 		}

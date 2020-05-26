@@ -68,24 +68,6 @@ func (s *Sync) Exec() {
 	}
 }
 
-func createRepo(org string, t *github.Repository) (*github.Repository, *github.Response, error) {
-	return client.Repositories.Create(ctx, org, t)
-}
-
-func editRepo(org string, t *github.Repository) (*github.Repository, *github.Response, error) {
-	if org == "" {
-		org = currentUser
-	}
-	return client.Repositories.Edit(ctx, org, *t.Name, t)
-}
-
-func editRepoBranches(org string, repo string, branch string, t *github.ProtectionRequest) (*github.Protection, *github.Response, error) {
-	if org == "" {
-		org = currentUser
-	}
-	return client.Repositories.UpdateBranchProtection(ctx, org, repo, branch, t)
-}
-
 func (f *file) getFile(filePath string) *file {
 	yamlFile, err := ioutil.ReadFile(filePath)
 	if err != nil {
