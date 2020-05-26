@@ -1,0 +1,35 @@
+---
+kind: pipeline
+name: default
+
+platform:
+  os: linux
+  arch: amd64
+
+clone:
+  depth: 1
+
+steps:
+  - name: vet
+    image: golang:1.12
+    volumes:
+      - name: gopath
+        path: /go
+    commands:
+      - go vet ./...
+
+  - name: test
+    image: golang:1.12
+    volumes:
+      - name: gopath
+        path: /go
+    commands:
+      - go test -cover ./...
+
+volumes:
+  - name: gopath
+    temp: {}
+
+trigger:
+  event:
+    - push
