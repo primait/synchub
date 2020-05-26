@@ -63,6 +63,7 @@ type branchRestriction struct {
 type collaborator struct {
 	Name       string `yaml:"name"`
 	Permission string `yaml:"permission"`
+	IsTeam     bool   `yaml:"is_team"`
 }
 
 func appendBaseToRepo(repo *repository, parsedFiles []*file) {
@@ -147,15 +148,26 @@ func syncBranch(repo string, org string, branches []branch) {
 func syncCollaborators(repo string, org string, collaborators []collaborator) {
 	logIfVerbose(fmt.Sprintf("Sync collaborators on repo %s\n", repo))
 	for _, collaborator := range collaborators {
-		logIfVerbose(fmt.Sprintf("%s added as collaborator on repo %s\n", collaborator.Name, repo))
+		logIfVerbose(fmt.Sprintf("Adding %s as collaborator on repo %s\n", collaborator.Name, repo))
 
-		opts := github.RepositoryAddCollaboratorOptions{
-			Permission: collaborator.Permission,
-		}
+		if collaborator.IsTeam {
+			opts := github.TeamAddTeamRepoOptions{
+				Permission: collaborator.Permission,
+			}
 
-		_, _, err := client.Repositories.AddCollaborator(ctx, org, repo, collaborator.Name, &opts)
-		if err != nil {
-			log.Fatal(err)
+			_, err := client.Teams.AddTeamRepoBySlug(ctx, org, collaborator.Name, org, repo, &opts)
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			opts := github.RepositoryAddCollaboratorOptions{
+				Permission: collaborator.Permission,
+			}
+
+			_, _, err := client.Repositories.AddCollaborator(ctx, org, repo, collaborator.Name, &opts)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }
