@@ -20,10 +20,17 @@ var (
 	bases       []base
 )
 
-// Sync function parse and process yaml file(s)
-func Sync(files []string, verbose bool, token string) {
-	v = verbose
-	client = newGithubClient(token)
+type Sync struct {
+	files         []string
+	verbose       bool
+	token         string
+	confirmPublic bool
+}
+
+// Exec function parse and process yaml file(s)
+func (s *Sync) Exec() {
+	v = s.verbose
+	client = newGithubClient(s.token)
 	var parsedFiles []*file
 
 	u, _, err := client.Users.Get(ctx, "")
@@ -32,7 +39,7 @@ func Sync(files []string, verbose bool, token string) {
 	}
 	currentUser = *u.Login
 
-	for _, arg := range files {
+	for _, arg := range s.files {
 		f := new(file)
 		f.Filename = path.Base(arg)
 		parsedFiles = append(parsedFiles, f.getFile(arg))

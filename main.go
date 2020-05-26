@@ -28,6 +28,12 @@ func commands() []*cli.Command {
 			Aliases:         []string{"s"},
 			Usage:           "specify yml file(s) to sync",
 			Action:          runSync,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:  "confirm-public",
+					Usage: "ask confirmation when repository is public",
+				},
+			},
 		},
 	}
 }
@@ -49,6 +55,12 @@ func flags() []cli.Flag {
 }
 
 func runSync(c *cli.Context) error {
-	Sync(c.Args().Slice(), c.Bool("verbose"), c.String("token"))
+	sync := Sync{
+		files:         c.Args().Slice(),
+		verbose:       c.Bool("verbose"),
+		token:         c.String("token"),
+		confirmPublic: c.Bool("confirm-public"),
+	}
+	sync.Exec()
 	return nil
 }
