@@ -46,27 +46,37 @@ func (s *Sync) Exec() {
 		parsedFiles = append(parsedFiles, f.getFile(arg))
 	}
 
+	sp.FinalMSG = "✔️ Synchronization completed!"
+
 	for _, obj := range parsedFiles {
-		fmt.Println("Processing file", obj.Filename)
+		sp.Suffix = "Processing file..."
+		sp.Start()
 
 		for _, repo := range obj.Repositories {
-			logIfVerbose(fmt.Sprintf("Sync repo %s...", repo.Name))
+			sp.Suffix = fmt.Sprintf("Sync repository %s", repo.Name)
+
+			logIfVerbose(fmt.Sprintf("Sync repository %s...", repo.Name))
 			appendBaseToRepo(&repo, parsedFiles)
 			processRepo(repo, "", s.confirmPublic)
 		}
 
 		for _, org := range obj.Organizations {
+			sp.Suffix = fmt.Sprintf("Sync organization %s...", org.Name)
+
 			logIfVerbose(fmt.Sprintf("Sync organization %s...", org.Name))
 			syncOrgTeams(org)
 			syncOrgHooks(org)
 
 			for _, orgRepo := range org.Repositories {
+				sp.Suffix = fmt.Sprintf("Sync repository %s on organization %s...", orgRepo.Name, org.Name)
+
 				logIfVerbose(fmt.Sprintf("Sync repo %s on organization %s...", orgRepo.Name, org.Name))
 				appendBaseToRepo(&orgRepo, parsedFiles)
 				processRepo(orgRepo, org.Name, s.confirmPublic)
 			}
 		}
 
+		sp.Stop()
 	}
 }
 

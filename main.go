@@ -3,11 +3,17 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
+	"github.com/briandowns/spinner"
 	"github.com/urfave/cli/v2"
 )
 
+var sp *spinner.Spinner
+
 func main() {
+	sp = spinner.New(spinner.CharSets[70], 100*time.Millisecond)
+
 	app := cli.NewApp()
 	app.Name = "synchub"
 	app.Usage = "keep github in sync!"

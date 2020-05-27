@@ -3,6 +3,7 @@ module github.com/primait/synchub
 go 1.14
 
 require (
+	github.com/briandowns/spinner v1.11.1
 	github.com/google/go-github/v31 v31.0.1-0.20200522014904-a37dd2dda868
 	github.com/imdario/mergo v0.3.9
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
