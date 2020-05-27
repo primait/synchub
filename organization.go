@@ -9,8 +9,8 @@ import (
 )
 
 type organization struct {
-	Name     string  `yaml:"name"`
-	Profile profile `yaml:"profile"`
+	Name    string   `yaml:"name"`
+	Profile *profile `yaml:"profile,omitempty"`
 
 	Repositories []repository `yaml:"repositories"`
 	Teams        []team       `yaml:"teams"`

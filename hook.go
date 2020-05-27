@@ -23,6 +23,10 @@ func syncRepoHooks(repo repository, owner string) {
 			Config: hook.Config,
 		}
 
+		if hook.Config["secret"] == "" && !askForConfirmation(fmt.Sprintf("No secrets for %s are specified. Are you sure you want to continue? [y/n]: ", hook.Config["name"])) {
+			continue
+		}
+
 		nh, resp, err := client.Repositories.CreateHook(ctx, owner, repo.Name, &h)
 		if err != nil && resp.StatusCode == 422 && nh == nil {
 			logIfVerbose(fmt.Sprintf("Hook %s already exist, updating...", hook.Config["url"]))
@@ -49,6 +53,10 @@ func syncOrgHooks(org organization) {
 			Events: hook.Events,
 			Active: github.Bool(hook.Active),
 			Config: hook.Config,
+		}
+
+		if hook.Config["secret"] == nil && !askForConfirmation(fmt.Sprintf("No secrets for %s are specified. Are you sure you want to continue? [y/n]: ", hook.Config["url"])) {
+			continue
 		}
 
 		nh, resp, err := client.Organizations.CreateHook(ctx, org.Name, &h)
