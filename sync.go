@@ -64,8 +64,7 @@ func (s *Sync) Exec() {
 			sp.Suffix = fmt.Sprintf("Sync organization %s...", org.Name)
 
 			logIfVerbose(fmt.Sprintf("Sync organization %s...", org.Name))
-			syncOrgTeams(org)
-			syncOrgHooks(org)
+			processOrg(org)
 
 			for _, orgRepo := range org.Repositories {
 				sp.Suffix = fmt.Sprintf("Sync repository %s on organization %s...", orgRepo.Name, org.Name)
