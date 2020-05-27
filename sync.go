@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"path"
 
 	"github.com/google/go-github/v31/github"
@@ -57,6 +58,7 @@ func (s *Sync) Exec() {
 		for _, org := range obj.Organizations {
 			logIfVerbose(fmt.Sprintf("Sync organization %s...", org.Name))
 			syncOrgTeams(org)
+			syncOrgHooks(org)
 
 			for _, orgRepo := range org.Repositories {
 				logIfVerbose(fmt.Sprintf("Sync repo %s on organization %s...", orgRepo.Name, org.Name))
@@ -70,6 +72,8 @@ func (s *Sync) Exec() {
 
 func (f *file) getFile(filePath string) *file {
 	yamlFile, err := ioutil.ReadFile(filePath)
+	// expand environment variables
+	yamlFile = []byte(os.ExpandEnv(string(yamlFile)))
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}

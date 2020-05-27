@@ -22,6 +22,7 @@ type repository struct {
 	Branches []branch `yaml:"branches"`
 
 	Collaborators []collaborator `yaml:"collaborators"`
+	Hooks         []hook         `yaml:"hooks"`
 
 	InheritFrom string `yaml:"inherit_from"`
 }
@@ -91,7 +92,7 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 	t := github.Repository{}
 	copier.Copy(&t, &repo)
 
-	// if repo is public e confirmation is enabled via `--confirm-public` show prompt to confirm
+	// if repo is public and confirmation is enabled via `--confirm-public` show prompt to confirm
 	if !repo.Private && confirmPublic && !askForConfirmation(fmt.Sprintf("Repository %s will be set public. Are you sure? [y/n]: ", repo.Name)) {
 		return
 	}
@@ -117,6 +118,7 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 
 	syncBranch(repo.Name, org, repo.Branches)
 	syncCollaborators(repo.Name, org, repo.Collaborators)
+	syncRepoHooks(repo, org)
 }
 
 func syncBranch(repo string, org string, branches []branch) {

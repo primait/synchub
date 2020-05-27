@@ -12,6 +12,7 @@ type organization struct {
 	Name         string       `yaml:"name"`
 	Repositories []repository `yaml:"repositories"`
 	Teams        []team       `yaml:"teams"`
+	Hooks        []hook       `yaml:"hooks"`
 }
 
 type team struct {
