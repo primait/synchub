@@ -2,10 +2,6 @@
 kind: pipeline
 name: default
 
-platform:
-  os: linux
-  arch: amd64
-
 clone:
   depth: 1
 
@@ -25,6 +21,17 @@ steps:
         path: /go
     commands:
       - go test -cover ./...
+
+  - name: release
+    image: golang:1.12
+    volumes:
+      - name: gopath
+        path: /go
+    commands:
+      - go get github.com/mitchellh/gox
+      - go get github.com/tcnksm/ghr
+      - gox -output "dist/synchub_{{.OS}}_{{.Arch}}"
+      - ls dist/
 
 volumes:
   - name: gopath
