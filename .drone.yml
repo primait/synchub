@@ -46,3 +46,4 @@ volumes:
 trigger:
   event:
     - push
+    - tag

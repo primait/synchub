@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"path"
+	"strings"
 
 	"github.com/google/go-github/v31/github"
 	"golang.org/x/oauth2"
@@ -22,8 +24,9 @@ var (
 
 type Sync struct {
 	files         []string
-	verbose       bool
 	token         string
+	repos         string
+	verbose       bool
 	confirmPublic bool
 }
 
@@ -45,31 +48,53 @@ func (s *Sync) Exec() {
 		parsedFiles = append(parsedFiles, f.getFile(arg))
 	}
 
+	restrictedRepos := strings.Split(s.repos, ",")
+
+	sp.FinalMSG = "✔️ Synchronization completed!"
+
 	for _, obj := range parsedFiles {
-		fmt.Println("Processing file", obj.Filename)
+		sp.Suffix = "Processing file..."
+		sp.Start()
 
 		for _, repo := range obj.Repositories {
-			logIfVerbose(fmt.Sprintf("Sync repo %s...", repo.Name))
+			if restrictedRepos[0] != "" && !stringInSlice(repo.Name, restrictedRepos) {
+				continue
+			}
+
+			sp.Suffix = fmt.Sprintf("Sync repository %s", repo.Name)
+
+			logIfVerbose(fmt.Sprintf("Sync repository %s...", repo.Name))
 			appendBaseToRepo(&repo, parsedFiles)
 			processRepo(repo, "", s.confirmPublic)
 		}
 
 		for _, org := range obj.Organizations {
+			sp.Suffix = fmt.Sprintf("Sync organization %s...", org.Name)
+
 			logIfVerbose(fmt.Sprintf("Sync organization %s...", org.Name))
-			syncOrgTeams(org)
+			processOrg(org)
 
 			for _, orgRepo := range org.Repositories {
+				if restrictedRepos[0] != "" && !stringInSlice(orgRepo.Name, restrictedRepos) {
+					continue
+				}
+
+				sp.Suffix = fmt.Sprintf("Sync repository %s on organization %s...", orgRepo.Name, org.Name)
+
 				logIfVerbose(fmt.Sprintf("Sync repo %s on organization %s...", orgRepo.Name, org.Name))
 				appendBaseToRepo(&orgRepo, parsedFiles)
 				processRepo(orgRepo, org.Name, s.confirmPublic)
 			}
 		}
 
+		sp.Stop()
 	}
 }
 
 func (f *file) getFile(filePath string) *file {
 	yamlFile, err := ioutil.ReadFile(filePath)
+	// expand environment variables
+	yamlFile = []byte(os.ExpandEnv(string(yamlFile)))
 	if err != nil {
 		log.Printf("yamlFile.Get err   #%v ", err)
 	}

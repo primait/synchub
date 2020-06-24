@@ -5,23 +5,23 @@ import (
 	"log"
 
 	"github.com/google/go-github/v31/github"
-	"github.com/imdario/mergo"
 	"github.com/jinzhu/copier"
 )
 
 type repository struct {
 	Name         string `yaml:"name"`
 	Description  string `yaml:"description"`
-	Private      bool   `yaml:"private"`
-	HasIssues    bool   `yaml:"has_issues"`
-	HasWiki      bool   `yaml:"has_wiki"`
-	HasPages     bool   `yaml:"has_pages"`
-	HasProjects  bool   `yaml:"has_projects"`
-	HasDownloads bool   `yaml:"has_downloads"`
+	Private      *bool  `yaml:"private"`
+	HasIssues    *bool  `yaml:"has_issues"`
+	HasWiki      *bool  `yaml:"has_wiki"`
+	HasPages     *bool  `yaml:"has_pages"`
+	HasProjects  *bool  `yaml:"has_projects"`
+	HasDownloads *bool  `yaml:"has_downloads"`
 
 	Branches []branch `yaml:"branches"`
 
 	Collaborators []collaborator `yaml:"collaborators"`
+	Hooks         []hook         `yaml:"hooks"`
 
 	InheritFrom string `yaml:"inherit_from"`
 }
@@ -81,7 +81,7 @@ func appendBaseToRepo(repo *repository, parsedFiles []*file) {
 		if d == nil {
 			log.Fatalf("Error searching \"%s\" base defined in %s repo", repo.InheritFrom, repo.Name)
 		}
-		if err := mergo.Merge(repo, d.Repository, mergo.WithOverride); err != nil {
+		if err := mergeOverwrite(d.Repository, repo, repo); err != nil {
 			log.Fatalf("An error occurred: %v", err)
 		}
 	}
@@ -91,8 +91,8 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 	t := github.Repository{}
 	copier.Copy(&t, &repo)
 
-	// if repo is public e confirmation is enabled via `--confirm-public` show prompt to confirm
-	if !repo.Private && confirmPublic && !askForConfirmation(fmt.Sprintf("Repository %s will be set public. Are you sure? [y/n]: ", repo.Name)) {
+	// if repo is public and confirmation is enabled via `--confirm-public` show prompt to confirm
+	if !*repo.Private && confirmPublic && !askForConfirmation(fmt.Sprintf("Repository %s will be set public. Are you sure? [y/n]: ", repo.Name)) {
 		return
 	}
 
@@ -117,6 +117,7 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 
 	syncBranch(repo.Name, org, repo.Branches)
 	syncCollaborators(repo.Name, org, repo.Collaborators)
+	syncRepoHooks(repo, org)
 }
 
 func syncBranch(repo string, org string, branches []branch) {

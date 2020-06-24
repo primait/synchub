@@ -3,11 +3,17 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
+	"github.com/briandowns/spinner"
 	"github.com/urfave/cli/v2"
 )
 
+var sp *spinner.Spinner
+
 func main() {
+	sp = spinner.New(spinner.CharSets[70], 100*time.Millisecond)
+
 	app := cli.NewApp()
 	app.Name = "synchub"
 	app.Usage = "keep github in sync!"
@@ -33,6 +39,11 @@ func commands() []*cli.Command {
 					Name:  "confirm-public",
 					Usage: "ask confirmation when repository is public",
 				},
+				&cli.StringFlag{
+					Name:    "repos",
+					Usage:   "restrict sync to one or more defined repo, separated by commas",
+					Aliases: []string{"r"},
+				},
 			},
 		},
 	}
@@ -57,8 +68,9 @@ func flags() []cli.Flag {
 func runSync(c *cli.Context) error {
 	sync := Sync{
 		files:         c.Args().Slice(),
-		verbose:       c.Bool("verbose"),
 		token:         c.String("token"),
+		repos:         c.String("repos"),
+		verbose:       c.Bool("verbose"),
 		confirmPublic: c.Bool("confirm-public"),
 	}
 	sync.Exec()

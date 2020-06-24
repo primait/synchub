@@ -9,9 +9,25 @@ import (
 )
 
 type organization struct {
-	Name         string       `yaml:"name"`
+	Name    string   `yaml:"name"`
+	Profile *profile `yaml:"profile,omitempty"`
+
 	Repositories []repository `yaml:"repositories"`
 	Teams        []team       `yaml:"teams"`
+	Hooks        []hook       `yaml:"hooks"`
+}
+
+type profile struct {
+	BillingEmail string `yaml:"billing_email"`
+	Company      string `yaml:"company"`
+	Email        string `yaml:"email"`
+	Location     string `yaml:"location"`
+	Description  string `yaml:"description"`
+
+	MembersCanCreateRepos        bool   `yaml:"members_can_create_repositories"`
+	MembersCanCreatePublicRepos  bool   `yaml:"members_can_create_public_repositories"`
+	MembersCanCreatePrivateRepos bool   `yaml:"members_can_create_private_repositories"`
+	DefaultRepoPermission        string `yaml:"default_repository_permission"`
 }
 
 type team struct {
@@ -28,6 +44,20 @@ type team struct {
 type teamMember struct {
 	Name string `yaml:"name,omitempty"`
 	Role string `yaml:"role,omitempty"`
+}
+
+func processOrg(org organization) {
+	t := github.Organization{}
+	copier.Copy(&t, &org.Profile)
+
+	_, resp, err := client.Organizations.Edit(ctx, org.Name, &t)
+	if err != nil {
+		fmt.Printf("%v", resp.Response.Body)
+		log.Fatal(err)
+	}
+
+	syncOrgTeams(org)
+	syncOrgHooks(org)
 }
 
 func syncOrgTeams(org organization) {
