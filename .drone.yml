@@ -1,0 +1,48 @@
+---
+kind: pipeline
+name: default
+
+clone:
+  depth: 1
+
+steps:
+  - name: vet
+    image: golang:1.12
+    volumes:
+      - name: gopath
+        path: /go
+    commands:
+      - go vet ./...
+
+  - name: test
+    image: golang:1.12
+    volumes:
+      - name: gopath
+        path: /go
+    commands:
+      - go test -cover ./...
+
+  - name: release
+    image: golang:1.12
+    volumes:
+      - name: gopath
+        path: /go
+    environment:
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
+    commands:
+      - go get github.com/mitchellh/gox
+      - go get github.com/tcnksm/ghr
+      - gox -output "dist/synchub_{{.OS}}_{{.Arch}}"
+      - ghr $DRONE_TAG dist/
+    when:
+      event:
+        - tag
+
+volumes:
+  - name: gopath
+    temp: {}
+
+trigger:
+  event:
+    - push
