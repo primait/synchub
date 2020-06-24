@@ -27,11 +27,17 @@ steps:
     volumes:
       - name: gopath
         path: /go
+    environment:
+      GITHUB_TOKEN:
+        from_secret: GITHUB_TOKEN
     commands:
       - go get github.com/mitchellh/gox
       - go get github.com/tcnksm/ghr
       - gox -output "dist/synchub_{{.OS}}_{{.Arch}}"
-      - ls dist/
+      - ghr $DRONE_TAG dist/
+    when:
+      event:
+        - tag
 
 volumes:
   - name: gopath
