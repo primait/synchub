@@ -88,3 +88,12 @@ func overwriteable(to, from *structs.Field) bool {
 	}
 	return true
 }
+
+func stringInSlice(str string, list []string) bool {
+	for _, elem := range list {
+		if elem == str {
+			return true
+		}
+	}
+	return false
+}

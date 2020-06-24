@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/google/go-github/v31/github"
 	"golang.org/x/oauth2"
@@ -23,8 +24,9 @@ var (
 
 type Sync struct {
 	files         []string
-	verbose       bool
 	token         string
+	repos         string
+	verbose       bool
 	confirmPublic bool
 }
 
@@ -46,6 +48,8 @@ func (s *Sync) Exec() {
 		parsedFiles = append(parsedFiles, f.getFile(arg))
 	}
 
+	restrictedRepos := strings.Split(s.repos, ",")
+
 	sp.FinalMSG = "✔️ Synchronization completed!"
 
 	for _, obj := range parsedFiles {
@@ -53,6 +57,10 @@ func (s *Sync) Exec() {
 		sp.Start()
 
 		for _, repo := range obj.Repositories {
+			if restrictedRepos[0] != "" && !stringInSlice(repo.Name, restrictedRepos) {
+				continue
+			}
+
 			sp.Suffix = fmt.Sprintf("Sync repository %s", repo.Name)
 
 			logIfVerbose(fmt.Sprintf("Sync repository %s...", repo.Name))
@@ -67,6 +75,10 @@ func (s *Sync) Exec() {
 			processOrg(org)
 
 			for _, orgRepo := range org.Repositories {
+				if restrictedRepos[0] != "" && !stringInSlice(orgRepo.Name, restrictedRepos) {
+					continue
+				}
+
 				sp.Suffix = fmt.Sprintf("Sync repository %s on organization %s...", orgRepo.Name, org.Name)
 
 				logIfVerbose(fmt.Sprintf("Sync repo %s on organization %s...", orgRepo.Name, org.Name))

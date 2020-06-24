@@ -11,12 +11,12 @@ import (
 type repository struct {
 	Name         string `yaml:"name"`
 	Description  string `yaml:"description"`
-	Private      *bool   `yaml:"private"`
-	HasIssues    *bool   `yaml:"has_issues"`
-	HasWiki      *bool   `yaml:"has_wiki"`
-	HasPages     *bool   `yaml:"has_pages"`
-	HasProjects  *bool   `yaml:"has_projects"`
-	HasDownloads *bool   `yaml:"has_downloads"`
+	Private      *bool  `yaml:"private"`
+	HasIssues    *bool  `yaml:"has_issues"`
+	HasWiki      *bool  `yaml:"has_wiki"`
+	HasPages     *bool  `yaml:"has_pages"`
+	HasProjects  *bool  `yaml:"has_projects"`
+	HasDownloads *bool  `yaml:"has_downloads"`
 
 	Branches []branch `yaml:"branches"`
 
