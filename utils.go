@@ -1,15 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
-	"reflect"
 	"regexp"
 	"strings"
-
-	"github.com/fatih/structs"
-	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 )
 
 func askForConfirmation(message string) bool {
@@ -49,45 +45,36 @@ func slug(s string) string {
 	return strings.Trim(re.ReplaceAllString(strings.ToLower(s), "-"), "-")
 }
 
-func mergeOverwrite(to, from, dst interface{}) error {
-	toMap := structs.Map(to)
-	toStruct := structs.New(to)
-	fromMap := structs.Map(from)
-	fromStruct := structs.New(from)
-	for k, v := range fromMap {
-		_, ok := toMap[k]
-		if !ok {
-			return errors.Errorf("no key: %s", k)
-		}
-		toField := toStruct.Field(k)
-		fromField := fromStruct.Field(k)
-		if overwriteable(toField, fromField) {
-			toMap[k] = v
-		}
+func mergeStruct(to interface{}, from interface{}) error {
+	byte1, err := json.Marshal(to)
+	if err != nil {
+		return err
 	}
-	if err := mapstructure.Decode(toMap, dst); err != nil {
-		return errors.Wrap(err, "faield to decode")
+	byte2, err := json.Marshal(from)
+	if err != nil {
+		return err
 	}
-	return nil
+	map1 := make(map[string]interface{})
+	err = json.Unmarshal(byte1, &map1)
+	if err != nil {
+		return err
+	}
+	map2 := make(map[string]interface{})
+	err = json.Unmarshal(byte2, &map2)
+	if err != nil {
+		return err
+	}
+	for k, v := range map2 {
+		map1[k] = v
+	}
+	byteDest, err := json.Marshal(map1)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(byteDest, to)
+	return err
 }
 
-func overwriteable(to, from *structs.Field) bool {
-	if to.Kind().String() == "bool" {
-		return true
-	}
-	if reflect.TypeOf(to).Kind().String() == "struct" {
-		return false
-	}
-	switch {
-	case to.IsZero() && !from.IsZero():
-		return true
-	case !to.IsZero() && !from.IsZero():
-		return true
-	case !to.IsZero() && from.IsZero():
-		return false
-	}
-	return true
-}
 
 func stringInSlice(str string, list []string) bool {
 	for _, elem := range list {

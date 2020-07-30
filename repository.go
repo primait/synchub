@@ -3,67 +3,69 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/google/go-github/v31/github"
+	"github.com/imdario/mergo"
 	"github.com/jinzhu/copier"
 )
 
 type repository struct {
-	Name         string `yaml:"name"`
-	Description  string `yaml:"description"`
-	Private      *bool  `yaml:"private"`
-	HasIssues    *bool  `yaml:"has_issues"`
-	HasWiki      *bool  `yaml:"has_wiki"`
-	HasPages     *bool  `yaml:"has_pages"`
-	HasProjects  *bool  `yaml:"has_projects"`
-	HasDownloads *bool  `yaml:"has_downloads"`
+	Name         string `yaml:"name" json:"name,omitempty"`
+	Description  string `yaml:"description" json:"description,omitempty"`
+	Private      *bool  `yaml:"private" json:"private,omitempty"`
+	HasIssues    *bool  `yaml:"has_issues" json:"has_issues,omitempty"`
+	HasWiki      *bool  `yaml:"has_wiki" json:"has_wiki,omitempty"`
+	HasPages     *bool  `yaml:"has_pages" json:"has_pages,omitempty"`
+	HasProjects  *bool  `yaml:"has_projects" json:"has_projects,omitempty"`
+	HasDownloads *bool  `yaml:"has_downloads" json:"has_downloads,omitempty"`
 
-	Branches []branch `yaml:"branches"`
+	Branches []branch `yaml:"branches" json:"branches,omitempty"`
 
-	Collaborators []collaborator `yaml:"collaborators"`
-	Hooks         []hook         `yaml:"hooks"`
+	Collaborators []collaborator `yaml:"collaborators" json:"collaborators,omitempty"`
+	Hooks         []hook         `yaml:"hooks" json:"hooks,omitempty"`
 
 	InheritFrom string `yaml:"inherit_from"`
 }
 
 type branch struct {
-	Name string `yaml:"name"`
+	Name string `yaml:"name" json:"name,omitempty"`
 
-	Protection protection `yaml:"protection"`
+	Protection protection `yaml:"protection" json:"protection,omitempty"`
 }
 
 type protection struct {
-	RequiredStatusChecks       *statusCheck      `yaml:"required_status_checks"`
-	RequiredPullRequestReviews *requiredReviews  `yaml:"required_pull_request_reviews"`
-	Restrictions               branchRestriction `yaml:"restrictions,omitempty"`
+	RequiredStatusChecks       *statusCheck      `yaml:"required_status_checks" json:"required_status_checks,omitempty"`
+	RequiredPullRequestReviews *requiredReviews  `yaml:"required_pull_request_reviews" json:"required_pull_request_reviews,omitempty"`
+	Restrictions               branchRestriction `yaml:"restrictions,omitempty" json:"restrictions,omitempty"`
 
-	EnforceAdmins        *bool `yaml:"enforce_admins"`
-	RequireLinearHistory *bool `yaml:"required_linear_history"`
-	AllowForcePushes     *bool `yaml:"allow_force_pushes"`
-	AllowDeletions       *bool `yaml:"allow_deletions"`
+	EnforceAdmins        *bool `yaml:"enforce_admins" json:"enforce_admins,omitempty"`
+	RequireLinearHistory *bool `yaml:"required_linear_history" json:"required_linear_history,omitempty"`
+	AllowForcePushes     *bool `yaml:"allow_force_pushes" json:"allow_force_pushes,omitempty"`
+	AllowDeletions       *bool `yaml:"allow_deletions" json:"allow_deletions,omitempty"`
 }
 
 type statusCheck struct {
-	Strict   *bool     `yaml:"strict"`
-	Contexts *[]string `yaml:"contexts"`
+	Strict   *bool     `yaml:"strict" json:"strict,omitempty"`
+	Contexts *[]string `yaml:"contexts" json:"contexts,omitempty"`
 }
 
 type requiredReviews struct {
-	DismissStaleReviews          *bool `yaml:"dismiss_stale_reviews"`
-	RequireCodeOwnerReviews      *bool `yaml:"require_code_owner_reviews"`
-	RequiredApprovingReviewCount *int  `yaml:"required_approving_review_count"`
+	DismissStaleReviews          *bool `yaml:"dismiss_stale_reviews" json:"dismiss_stale_reviews,omitempty"`
+	RequireCodeOwnerReviews      *bool `yaml:"require_code_owner_reviews" json:"require_code_owner_reviews,omitempty"`
+	RequiredApprovingReviewCount *int  `yaml:"required_approving_review_count" json:"required_approving_review_count,omitempty"`
 }
 
 type branchRestriction struct {
-	Apps  *[]string `yaml:"apps,omitempty"`
-	Users *[]string `yaml:"users,omitempty"`
-	Teams *[]string `yaml:"teams,omitempty"`
+	Apps  *[]string `yaml:"apps,omitempty" json:"apps,omitempty"`
+	Users *[]string `yaml:"users,omitempty" json:"users,omitempty"`
+	Teams *[]string `yaml:"teams,omitempty" json:"teams,omitempty"`
 }
 
 type collaborator struct {
-	Name       string `yaml:"name"`
-	Permission string `yaml:"permission"`
-	IsTeam     bool   `yaml:"is_team"`
+	Name       string `yaml:"name" json:"name,omitempty"`
+	Permission string `yaml:"permission" json:"permission,omitempty"`
+	IsTeam     bool   `yaml:"is_team" json:"is_team,omitempty"`
 }
 
 func appendBaseToRepo(repo *repository, parsedFiles []*file) {
@@ -81,10 +83,29 @@ func appendBaseToRepo(repo *repository, parsedFiles []*file) {
 		if d == nil {
 			log.Fatalf("Error searching \"%s\" base defined in %s repo", repo.InheritFrom, repo.Name)
 		}
-		if err := mergeOverwrite(d.Repository, repo, repo); err != nil {
+
+		for _, branch := range repo.Branches {
+			for _, baseBranch := range d.Repository.Branches {
+				if baseBranch.Name == branch.Name {
+					fmt.Printf("\nFound %s with %s", branch.Name, baseBranch.Name)
+					if err := mergo.Merge(&branch, baseBranch, mergo.WithOverride); err != nil {
+						log.Fatalf("An error occurred: %v", err)
+					}
+					fmt.Printf("\n%v\n", *branch.Protection.EnforceAdmins)
+					fmt.Printf("%v\n", branch.Protection.RequiredStatusChecks.Contexts)
+					break
+				}
+			}
+		}
+
+		if err := mergo.Merge(repo, d.Repository, mergo.WithOverride); err != nil {
 			log.Fatalf("An error occurred: %v", err)
 		}
-	}
+	} 
+
+	fmt.Printf("\n%v\n", *repo.Branches[0].Protection.EnforceAdmins)
+	fmt.Printf("%v\n", repo.Branches[0].Protection.RequiredStatusChecks.Contexts)
+	os.Exit(0)
 }
 
 func processRepo(repo repository, org string, confirmPublic bool) {

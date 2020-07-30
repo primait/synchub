@@ -6,6 +6,7 @@ require (
 	github.com/briandowns/spinner v1.11.1
 	github.com/fatih/structs v1.1.0
 	github.com/google/go-github/v31 v31.0.0
+	github.com/imdario/mergo v0.3.10
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a
 	github.com/mitchellh/mapstructure v1.3.2
 	github.com/pkg/errors v0.9.1
