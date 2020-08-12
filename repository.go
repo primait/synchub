@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/google/go-github/v31/github"
 	"github.com/imdario/mergo"
@@ -21,7 +19,7 @@ type repository struct {
 	HasProjects  *bool  `yaml:"has_projects" json:"has_projects,omitempty"`
 	HasDownloads *bool  `yaml:"has_downloads" json:"has_downloads,omitempty"`
 
-	Branches []branch `yaml:"branches" json:"branches,omitempty"`
+	Branches map[string]branch `yaml:"branches" json:"branches,omitempty"`
 
 	Collaborators []collaborator `yaml:"collaborators" json:"collaborators,omitempty"`
 	Hooks         []hook         `yaml:"hooks" json:"hooks,omitempty"`
@@ -32,7 +30,7 @@ type repository struct {
 type branch struct {
 	Name string `yaml:"name" json:"name,omitempty"`
 
-	Protection protection `yaml:"protection" json:"protection,omitempty"`
+	Protection *protection `yaml:"protection" json:"protection,omitempty"`
 }
 
 type protection struct {
@@ -85,52 +83,29 @@ func appendBaseToRepo(repo *repository, parsedFiles []*file) {
 			log.Fatalf("Error searching \"%s\" base defined in %s repo", repo.InheritFrom, repo.Name)
 		}
 
-		repoCopy := repo
-		if err := mergo.Merge(&d.Repository, repo); err != nil {
-			log.Fatalf("An error occurred: %v", err)
-		}
-
-		repo = &d.Repository
-
-		for _, branch := range repoCopy.Branches {
-			for _, baseBranch := range d.Repository.Branches {
-				if baseBranch.Name == branch.Name {
-
-					branch.Protection.RequiredStatusChecks.Contexts = append(branch.Protection.RequiredStatusChecks.Contexts, baseBranch.Protection.RequiredStatusChecks.Contexts...)
-					branch.Protection.Restrictions.Teams = append(branch.Protection.Restrictions.Teams, baseBranch.Protection.Restrictions.Teams...)
-					branch.Protection.Restrictions.Users = append(branch.Protection.Restrictions.Users, baseBranch.Protection.Restrictions.Users...)
-					branch.Protection.Restrictions.Apps = append(branch.Protection.Restrictions.Apps, baseBranch.Protection.Restrictions.Apps...)
-
-					if err := mergo.Merge(&baseBranch.Protection, branch.Protection, mergo.WithOverride); err != nil {
-						log.Fatalf("An error occurred: %v", err)
-					}
-
-					branch = baseBranch
-					break
+		for branchName, branch := range repo.Branches {
+			for baseBranchName, baseBranch := range d.Repository.Branches {
+				if baseBranchName == branchName {
+					if branch.Protection.EnforceAdmins == nil {
+                        branch.Protection.EnforceAdmins = baseBranch.Protection.EnforceAdmins
+                    }
+                    if branch.Protection.RequireLinearHistory == nil {
+                        branch.Protection.RequireLinearHistory = baseBranch.Protection.RequireLinearHistory
+                    }
+                    if branch.Protection.AllowForcePushes == nil {
+                        branch.Protection.AllowForcePushes = baseBranch.Protection.AllowForcePushes
+                    }
+                    if branch.Protection.AllowDeletions == nil {
+                        branch.Protection.AllowDeletions = baseBranch.Protection.AllowDeletions
+                    }
 				}
 			}
 		}
 
-		repo.Branches = repoCopy.Branches
+		if err := mergo.Merge(repo, d.Repository, mergo.WithAppendSlice, mergo.WithTypeCheck); err != nil {
+			log.Fatalf("An error occurred: %v", err)
+		}
 	}
-
-	fmt.Printf("\nEnforceAdmins: %v\n", repo.Branches[0].Protection.EnforceAdmins)
-	fmt.Printf("Contexts: %v\n", repo.Branches[0].Protection.RequiredStatusChecks.Contexts)
-	fmt.Printf("DismissStaleReviews: %v\n", *repo.Branches[0].Protection.RequiredPullRequestReviews.DismissStaleReviews)
-	fmt.Printf("RequireCodeOwnerReviews: %v\n", *repo.Branches[0].Protection.RequiredPullRequestReviews.RequireCodeOwnerReviews)
-	fmt.Printf("RequiredApprovingReviewCount: %v\n", *repo.Branches[0].Protection.RequiredPullRequestReviews.RequiredApprovingReviewCount)
-	fmt.Printf("Restrictions Teams: %v\n", repo.Branches[0].Protection.Restrictions.Teams)
-	fmt.Printf("Restrictions Users: %v\n", repo.Branches[0].Protection.Restrictions.Users)
-	fmt.Printf("Restrictions Apps: %v\n", repo.Branches[0].Protection.Restrictions.Apps)
-
-	fmt.Printf("RequireLinearHistory: %v\n", repo.Branches[0].Protection.RequireLinearHistory)
-	fmt.Printf("AllowForcePushes: %v\n", repo.Branches[0].Protection.AllowForcePushes)
-	fmt.Printf("AllowDeletions: %v\n", repo.Branches[0].Protection.AllowDeletions)
-
-	r, _ := json.MarshalIndent(repo, "", "    ")
-	fmt.Println(string(r))
-
-	os.Exit(0)
 }
 
 func processRepo(repo repository, org string, confirmPublic bool) {
@@ -166,9 +141,9 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 	syncRepoHooks(repo, org)
 }
 
-func syncBranch(repo string, org string, branches []branch) {
-	for _, branch := range branches {
-		logIfVerbose(fmt.Sprintf("Sync branch %s on repo %s\n", branch.Name, repo))
+func syncBranch(repo string, org string, branches map[string]branch) {
+	for name, branch := range branches {
+		logIfVerbose(fmt.Sprintf("Sync branch %s on repo %s\n", name, repo))
 
 		// RequiredStatusChecks
 		a := github.RequiredStatusChecks{}
@@ -185,7 +160,7 @@ func syncBranch(repo string, org string, branches []branch) {
 		t := github.ProtectionRequest{RequiredStatusChecks: &a, RequiredPullRequestReviews: &b, Restrictions: &c}
 		copier.Copy(&t, &branch.Protection)
 
-		_, _, err := client.Repositories.UpdateBranchProtection(ctx, org, repo, branch.Name, &t)
+		_, _, err := client.Repositories.UpdateBranchProtection(ctx, org, repo, name, &t)
 		if err != nil {
 			log.Fatal(err)
 		}
