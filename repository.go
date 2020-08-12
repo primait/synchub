@@ -87,17 +87,17 @@ func appendBaseToRepo(repo *repository, parsedFiles []*file) {
 			for baseBranchName, baseBranch := range d.Repository.Branches {
 				if baseBranchName == branchName {
 					if branch.Protection.EnforceAdmins == nil {
-                        branch.Protection.EnforceAdmins = baseBranch.Protection.EnforceAdmins
-                    }
-                    if branch.Protection.RequireLinearHistory == nil {
-                        branch.Protection.RequireLinearHistory = baseBranch.Protection.RequireLinearHistory
-                    }
-                    if branch.Protection.AllowForcePushes == nil {
-                        branch.Protection.AllowForcePushes = baseBranch.Protection.AllowForcePushes
-                    }
-                    if branch.Protection.AllowDeletions == nil {
-                        branch.Protection.AllowDeletions = baseBranch.Protection.AllowDeletions
-                    }
+						branch.Protection.EnforceAdmins = baseBranch.Protection.EnforceAdmins
+					}
+					if branch.Protection.RequireLinearHistory == nil {
+						branch.Protection.RequireLinearHistory = baseBranch.Protection.RequireLinearHistory
+					}
+					if branch.Protection.AllowForcePushes == nil {
+						branch.Protection.AllowForcePushes = baseBranch.Protection.AllowForcePushes
+					}
+					if branch.Protection.AllowDeletions == nil {
+						branch.Protection.AllowDeletions = baseBranch.Protection.AllowDeletions
+					}
 				}
 			}
 		}
