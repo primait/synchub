@@ -75,7 +75,6 @@ func mergeStruct(to interface{}, from interface{}) error {
 	return err
 }
 
-
 func stringInSlice(str string, list []string) bool {
 	for _, elem := range list {
 		if elem == str {

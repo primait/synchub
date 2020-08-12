@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -35,9 +36,9 @@ type branch struct {
 }
 
 type protection struct {
-	RequiredStatusChecks       *statusCheck      `yaml:"required_status_checks" json:"required_status_checks,omitempty"`
-	RequiredPullRequestReviews *requiredReviews  `yaml:"required_pull_request_reviews" json:"required_pull_request_reviews,omitempty"`
-	Restrictions               branchRestriction `yaml:"restrictions,omitempty" json:"restrictions,omitempty"`
+	RequiredStatusChecks       *statusCheck       `yaml:"required_status_checks" json:"required_status_checks,omitempty"`
+	RequiredPullRequestReviews *requiredReviews   `yaml:"required_pull_request_reviews" json:"required_pull_request_reviews,omitempty"`
+	Restrictions               *branchRestriction `yaml:"restrictions,omitempty" json:"restrictions,omitempty"`
 
 	EnforceAdmins        *bool `yaml:"enforce_admins" json:"enforce_admins,omitempty"`
 	RequireLinearHistory *bool `yaml:"required_linear_history" json:"required_linear_history,omitempty"`
@@ -46,8 +47,8 @@ type protection struct {
 }
 
 type statusCheck struct {
-	Strict   *bool     `yaml:"strict" json:"strict,omitempty"`
-	Contexts *[]string `yaml:"contexts" json:"contexts,omitempty"`
+	Strict   *bool    `yaml:"strict" json:"strict,omitempty"`
+	Contexts []string `yaml:"contexts" json:"contexts,omitempty"`
 }
 
 type requiredReviews struct {
@@ -57,9 +58,9 @@ type requiredReviews struct {
 }
 
 type branchRestriction struct {
-	Apps  *[]string `yaml:"apps,omitempty" json:"apps,omitempty"`
-	Users *[]string `yaml:"users,omitempty" json:"users,omitempty"`
-	Teams *[]string `yaml:"teams,omitempty" json:"teams,omitempty"`
+	Apps  []string `yaml:"apps,omitempty" json:"apps,omitempty"`
+	Users []string `yaml:"users,omitempty" json:"users,omitempty"`
+	Teams []string `yaml:"teams,omitempty" json:"teams,omitempty"`
 }
 
 type collaborator struct {
@@ -84,27 +85,51 @@ func appendBaseToRepo(repo *repository, parsedFiles []*file) {
 			log.Fatalf("Error searching \"%s\" base defined in %s repo", repo.InheritFrom, repo.Name)
 		}
 
-		for _, branch := range repo.Branches {
+		repoCopy := repo
+		if err := mergo.Merge(&d.Repository, repo); err != nil {
+			log.Fatalf("An error occurred: %v", err)
+		}
+
+		repo = &d.Repository
+
+		for _, branch := range repoCopy.Branches {
 			for _, baseBranch := range d.Repository.Branches {
 				if baseBranch.Name == branch.Name {
-					fmt.Printf("\nFound %s with %s", branch.Name, baseBranch.Name)
-					if err := mergo.Merge(&branch, baseBranch, mergo.WithOverride); err != nil {
+
+					branch.Protection.RequiredStatusChecks.Contexts = append(branch.Protection.RequiredStatusChecks.Contexts, baseBranch.Protection.RequiredStatusChecks.Contexts...)
+					branch.Protection.Restrictions.Teams = append(branch.Protection.Restrictions.Teams, baseBranch.Protection.Restrictions.Teams...)
+					branch.Protection.Restrictions.Users = append(branch.Protection.Restrictions.Users, baseBranch.Protection.Restrictions.Users...)
+					branch.Protection.Restrictions.Apps = append(branch.Protection.Restrictions.Apps, baseBranch.Protection.Restrictions.Apps...)
+
+					if err := mergo.Merge(&baseBranch.Protection, branch.Protection, mergo.WithOverride); err != nil {
 						log.Fatalf("An error occurred: %v", err)
 					}
-					fmt.Printf("\n%v\n", *branch.Protection.EnforceAdmins)
-					fmt.Printf("%v\n", branch.Protection.RequiredStatusChecks.Contexts)
+
+					branch = baseBranch
 					break
 				}
 			}
 		}
 
-		if err := mergo.Merge(repo, d.Repository, mergo.WithOverride); err != nil {
-			log.Fatalf("An error occurred: %v", err)
-		}
-	} 
+		repo.Branches = repoCopy.Branches
+	}
 
-	fmt.Printf("\n%v\n", *repo.Branches[0].Protection.EnforceAdmins)
-	fmt.Printf("%v\n", repo.Branches[0].Protection.RequiredStatusChecks.Contexts)
+	fmt.Printf("\nEnforceAdmins: %v\n", repo.Branches[0].Protection.EnforceAdmins)
+	fmt.Printf("Contexts: %v\n", repo.Branches[0].Protection.RequiredStatusChecks.Contexts)
+	fmt.Printf("DismissStaleReviews: %v\n", *repo.Branches[0].Protection.RequiredPullRequestReviews.DismissStaleReviews)
+	fmt.Printf("RequireCodeOwnerReviews: %v\n", *repo.Branches[0].Protection.RequiredPullRequestReviews.RequireCodeOwnerReviews)
+	fmt.Printf("RequiredApprovingReviewCount: %v\n", *repo.Branches[0].Protection.RequiredPullRequestReviews.RequiredApprovingReviewCount)
+	fmt.Printf("Restrictions Teams: %v\n", repo.Branches[0].Protection.Restrictions.Teams)
+	fmt.Printf("Restrictions Users: %v\n", repo.Branches[0].Protection.Restrictions.Users)
+	fmt.Printf("Restrictions Apps: %v\n", repo.Branches[0].Protection.Restrictions.Apps)
+
+	fmt.Printf("RequireLinearHistory: %v\n", repo.Branches[0].Protection.RequireLinearHistory)
+	fmt.Printf("AllowForcePushes: %v\n", repo.Branches[0].Protection.AllowForcePushes)
+	fmt.Printf("AllowDeletions: %v\n", repo.Branches[0].Protection.AllowDeletions)
+
+	r, _ := json.MarshalIndent(repo, "", "    ")
+	fmt.Println(string(r))
+
 	os.Exit(0)
 }
 
