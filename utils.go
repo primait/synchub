@@ -3,13 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-	"reflect"
 	"regexp"
 	"strings"
-
-	"github.com/fatih/structs"
-	"github.com/mitchellh/mapstructure"
-	"github.com/pkg/errors"
 )
 
 func askForConfirmation(message string) bool {
@@ -49,44 +44,19 @@ func slug(s string) string {
 	return strings.Trim(re.ReplaceAllString(strings.ToLower(s), "-"), "-")
 }
 
-func mergeOverwrite(to, from, dst interface{}) error {
-	toMap := structs.Map(to)
-	toStruct := structs.New(to)
-	fromMap := structs.Map(from)
-	fromStruct := structs.New(from)
-	for k, v := range fromMap {
-		_, ok := toMap[k]
-		if !ok {
-			return errors.Errorf("no key: %s", k)
-		}
-		toField := toStruct.Field(k)
-		fromField := fromStruct.Field(k)
-		if overwriteable(toField, fromField) {
-			toMap[k] = v
+// difference returns the elements in `a` that aren't in `b`.
+func difference(a, b []string) []string {
+	mb := make(map[string]struct{}, len(b))
+	for _, x := range b {
+		mb[x] = struct{}{}
+	}
+	var diff []string
+	for _, x := range a {
+		if _, found := mb[x]; !found {
+			diff = append(diff, x)
 		}
 	}
-	if err := mapstructure.Decode(toMap, dst); err != nil {
-		return errors.Wrap(err, "faield to decode")
-	}
-	return nil
-}
-
-func overwriteable(to, from *structs.Field) bool {
-	if to.Kind().String() == "bool" {
-		return true
-	}
-	if reflect.TypeOf(to).Kind().String() == "struct" {
-		return false
-	}
-	switch {
-	case to.IsZero() && !from.IsZero():
-		return true
-	case !to.IsZero() && !from.IsZero():
-		return true
-	case !to.IsZero() && from.IsZero():
-		return false
-	}
-	return true
+	return diff
 }
 
 func stringInSlice(str string, list []string) bool {
