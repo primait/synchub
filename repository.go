@@ -11,14 +11,18 @@ import (
 )
 
 type repository struct {
-	Name         string `yaml:"name" json:"name,omitempty"`
-	Description  string `yaml:"description" json:"description,omitempty"`
-	Private      *bool  `yaml:"private" json:"private,omitempty"`
-	HasIssues    *bool  `yaml:"has_issues" json:"has_issues,omitempty"`
-	HasWiki      *bool  `yaml:"has_wiki" json:"has_wiki,omitempty"`
-	HasPages     *bool  `yaml:"has_pages" json:"has_pages,omitempty"`
-	HasProjects  *bool  `yaml:"has_projects" json:"has_projects,omitempty"`
-	HasDownloads *bool  `yaml:"has_downloads" json:"has_downloads,omitempty"`
+	Name                string `yaml:"name" json:"name,omitempty"`
+	Description         string `yaml:"description" json:"description,omitempty"`
+	Private             *bool  `yaml:"private" json:"private,omitempty"`
+	HasIssues           *bool  `yaml:"has_issues" json:"has_issues,omitempty"`
+	HasWiki             *bool  `yaml:"has_wiki" json:"has_wiki,omitempty"`
+	HasPages            *bool  `yaml:"has_pages" json:"has_pages,omitempty"`
+	HasProjects         *bool  `yaml:"has_projects" json:"has_projects,omitempty"`
+	HasDownloads        *bool  `yaml:"has_downloads" json:"has_downloads,omitempty"`
+	AllowSquashMerge    *bool  `yaml:"allow_squash_merge" json:"allow_squash_merge,omitempty"`
+	AllowMergeCommit    *bool  `yaml:"allow_merge_commit" json:"allow_merge_commit,omitempty"`
+	AllowRebaseMerge    *bool  `yaml:"allow_rebase_merge" json:"allow_rebase_merge,omitempty"`
+	DeleteBranchOnMerge *bool  `yaml:"delete_branch_on_merge" json:"delete_branch_on_merge,omitempty"`
 
 	Branches map[string]branch `yaml:"branches" json:"branches,omitempty"`
 
@@ -82,25 +86,6 @@ func appendBaseToRepo(repo *repository, parsedFiles []*file) {
 		}
 		if d == nil {
 			log.Fatalf("Error searching \"%s\" base defined in %s repo", repo.InheritFrom, repo.Name)
-		}
-
-		for branchName, branch := range repo.Branches {
-			for baseBranchName, baseBranch := range d.Repository.Branches {
-				if baseBranchName == branchName {
-					if branch.Protection.EnforceAdmins == nil {
-						branch.Protection.EnforceAdmins = baseBranch.Protection.EnforceAdmins
-					}
-					if branch.Protection.RequireLinearHistory == nil {
-						branch.Protection.RequireLinearHistory = baseBranch.Protection.RequireLinearHistory
-					}
-					if branch.Protection.AllowForcePushes == nil {
-						branch.Protection.AllowForcePushes = baseBranch.Protection.AllowForcePushes
-					}
-					if branch.Protection.AllowDeletions == nil {
-						branch.Protection.AllowDeletions = baseBranch.Protection.AllowDeletions
-					}
-				}
-			}
 		}
 
 		if err := mergo.Merge(repo, d.Repository, mergo.WithAppendSlice, mergo.WithTypeCheck); err != nil {
