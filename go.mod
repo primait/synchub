@@ -1,5 +1,7 @@
 module github.com/primait/synchub
 
+go 1.14
+
 require (
 	github.com/briandowns/spinner v1.11.1
 	github.com/google/go-github/v31 v31.0.0

@@ -7,7 +7,7 @@ clone:
 
 steps:
   - name: vet
-    image: golang:1.12
+    image: golang:1.14
     volumes:
       - name: gopath
         path: /go
@@ -15,7 +15,7 @@ steps:
       - go vet ./...
 
   - name: test
-    image: golang:1.12
+    image: golang:1.14
     volumes:
       - name: gopath
         path: /go
@@ -23,7 +23,7 @@ steps:
       - go test -cover ./...
 
   - name: release
-    image: golang:1.12
+    image: golang:1.14
     volumes:
       - name: gopath
         path: /go
