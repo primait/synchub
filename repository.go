@@ -137,7 +137,7 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 		logIfVerbose(fmt.Sprintf("Successfully updated repo: %v\n", repo.Name))
 	}
 
-	// syncBranch(repo.Name, org, repo.Branches)
+	syncBranch(repo.Name, org, repo.Branches)
 	syncCollaborators(repo.Name, org, repo.Collaborators)
 	syncRepoHooks(repo, org)
 }
