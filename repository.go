@@ -127,12 +127,12 @@ func processRepo(repo repository, org string, confirmPublic bool) {
 		if askForConfirmation(fmt.Sprintf("Oh-oh! %s does not exist on Github. Do you want to create it? [y/n]: ", repo.Name)) {
 			_, _, err := client.Repositories.Create(ctx, org, &t)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println("An error occurred:", err)
 			}
 			logIfVerbose(fmt.Sprintf("Successfully updated repo: %v\n", repo.Name))
 		}
 	} else if err != nil {
-		log.Fatal(err)
+		fmt.Println("An error occurred:", err)
 	} else {
 		logIfVerbose(fmt.Sprintf("Successfully updated repo: %v\n", repo.Name))
 	}
@@ -163,7 +163,7 @@ func syncBranch(repo string, org string, branches map[string]branch) {
 
 		_, _, err := client.Repositories.UpdateBranchProtection(ctx, org, repo, name, &t)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println("An error occurred:", err)
 		}
 	}
 }
@@ -177,7 +177,7 @@ func syncCollaborators(repo string, org string, collaborators []*collaborator) {
 		logIfVerbose(fmt.Sprintf("Remove team %s from collaborators on %s\n", d, repo))
 		_, err := client.Teams.RemoveTeamRepoBySlug(ctx, org, d, org, repo)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println("An error occurred:", err)
 		}
 	}
 
@@ -186,13 +186,13 @@ func syncCollaborators(repo string, org string, collaborators []*collaborator) {
 		logIfVerbose(fmt.Sprintf("Remove user %s from collaborators on %s\n", d, repo))
 		_, err := client.Repositories.RemoveCollaborator(ctx, org, repo, d)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println("An error occurred:", err)
 		}
 	}
 
 	logIfVerbose(fmt.Sprintf("Sync collaborators on repo %s\n", repo))
 	for _, collaborator := range collaborators {
-		logIfVerbose(fmt.Sprintf("Adding %s as collaborator on repo %s\n", *collaborator.Name, repo))
+		logIfVerbose(fmt.Sprintf("Add %s as collaborator on repo %s\n", *collaborator.Name, repo))
 
 		if collaborator.IsTeam != nil && *collaborator.IsTeam {
 			opts := github.TeamAddTeamRepoOptions{
@@ -201,7 +201,7 @@ func syncCollaborators(repo string, org string, collaborators []*collaborator) {
 
 			_, err := client.Teams.AddTeamRepoBySlug(ctx, org, *collaborator.Name, org, repo, &opts)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println("An error occurred:", err)
 			}
 		} else {
 			opts := github.RepositoryAddCollaboratorOptions{
@@ -210,7 +210,7 @@ func syncCollaborators(repo string, org string, collaborators []*collaborator) {
 
 			_, _, err := client.Repositories.AddCollaborator(ctx, org, repo, *collaborator.Name, &opts)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println("An error occurred:", err)
 			}
 		}
 	}
