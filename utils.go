@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"regexp"
@@ -45,34 +44,19 @@ func slug(s string) string {
 	return strings.Trim(re.ReplaceAllString(strings.ToLower(s), "-"), "-")
 }
 
-func mergeStruct(to interface{}, from interface{}) error {
-	byte1, err := json.Marshal(to)
-	if err != nil {
-		return err
+// difference returns the elements in `a` that aren't in `b`.
+func difference(a, b []string) []string {
+	mb := make(map[string]struct{}, len(b))
+	for _, x := range b {
+		mb[x] = struct{}{}
 	}
-	byte2, err := json.Marshal(from)
-	if err != nil {
-		return err
+	var diff []string
+	for _, x := range a {
+		if _, found := mb[x]; !found {
+			diff = append(diff, x)
+		}
 	}
-	map1 := make(map[string]interface{})
-	err = json.Unmarshal(byte1, &map1)
-	if err != nil {
-		return err
-	}
-	map2 := make(map[string]interface{})
-	err = json.Unmarshal(byte2, &map2)
-	if err != nil {
-		return err
-	}
-	for k, v := range map2 {
-		map1[k] = v
-	}
-	byteDest, err := json.Marshal(map1)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(byteDest, to)
-	return err
+	return diff
 }
 
 func stringInSlice(str string, list []string) bool {
