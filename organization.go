@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -31,6 +32,7 @@ type profile struct {
 }
 
 type team struct {
+	Id           string
 	Name         string   `yaml:"name"`
 	Description  string   `yaml:"description,omitempty"`
 	Maintainers  []string `yaml:"maintainers,omitempty"`
@@ -61,17 +63,49 @@ func processOrg(org organization) {
 }
 
 func syncOrgTeams(org organization) {
+	currentTeams, _, _ := client.Teams.ListTeams(ctx, org.Name, &github.ListOptions{})
+
+	deletedTeams := deletedTeams(org.Teams, currentTeams)
+	for _, d := range deletedTeams {
+		logIfVerbose(fmt.Sprintf("Delete team %s from %s", *d.Name, org.Name))
+		_, err := client.Teams.DeleteTeamBySlug(ctx, org.Name, *d.Slug)
+		if err != nil {
+			fmt.Println("An error occurred:", err)
+		}
+	}
+
 	for _, team := range org.Teams {
 		logIfVerbose(fmt.Sprintf("Sync team %s", team.Name))
+
 		t := github.NewTeam{}
 		copier.Copy(&t, &team)
+
+		teamId, teamErr := getTeamId(currentTeams, slug(team.Name))
+		if teamErr == nil {
+			t.ParentTeamID = &teamId
+		}
 
 		_, _, err := client.Teams.CreateTeam(ctx, org.Name, t)
 		if err != nil {
 			logIfVerbose(fmt.Sprintf("Update existing team %s", team.Name))
-			_, _, editErr := client.Teams.EditTeamBySlug(ctx, org.Name, slug(team.Name), t, false)
-			if editErr != nil {
-				log.Fatal(editErr)
+			_, _, err := client.Teams.EditTeamBySlug(ctx, org.Name, slug(team.Name), t, false)
+			if err != nil {
+				fmt.Println("An error occurred:", err)
+			}
+
+			currentMembers, _, err := client.Teams.ListTeamMembersBySlug(ctx, org.Name, slug(team.Name), &github.TeamListTeamMembersOptions{})
+			if err != nil {
+				fmt.Println("An error occurred:", err)
+				continue
+			}
+
+			deletedMembers := deletedMembers(team.Members, currentMembers)
+			for _, m := range deletedMembers {
+				logIfVerbose(fmt.Sprintf("Delete member %s from team %s", *m.Login, team.Name))
+				_, err := client.Teams.RemoveTeamMembershipBySlug(ctx, org.Name, slug(team.Name), *m.Login)
+				if err != nil {
+					fmt.Println("An error occurred:", err)
+				}
 			}
 		}
 
@@ -83,8 +117,53 @@ func syncOrgTeams(org organization) {
 			}
 			_, _, err := client.Teams.AddTeamMembershipBySlug(ctx, org.Name, slug(team.Name), member.Name, &role)
 			if err != nil {
-				log.Fatal(err)
+				fmt.Println("An error occurred:", err)
 			}
 		}
 	}
+}
+
+func deletedTeams(current []team, teams []*github.Team) []github.Team {
+	var diff []github.Team
+	for _, t := range teams {
+		var f = false
+	J:
+		for _, c := range current {
+			if c.Name == *t.Name {
+				f = true
+				break J
+			}
+		}
+		if !f {
+			diff = append(diff, *t)
+		}
+	}
+	return diff
+}
+
+func deletedMembers(current []teamMember, users []*github.User) []github.User {
+	var diff []github.User
+	for _, t := range users {
+		var f = false
+	J:
+		for _, c := range current {
+			if c.Name == *t.Login {
+				f = true
+				break J
+			}
+		}
+		if !f {
+			diff = append(diff, *t)
+		}
+	}
+	return diff
+}
+
+func getTeamId(teams []*github.Team, slug string) (int64, error) {
+	for _, t := range teams {
+		if *t.Slug == slug {
+			return *t.ID, nil
+		}
+	}
+	return -1, errors.New("No team found")
 }
