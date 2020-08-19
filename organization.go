@@ -32,13 +32,13 @@ type profile struct {
 }
 
 type team struct {
-	Id           string
-	Name         string   `yaml:"name"`
-	Description  string   `yaml:"description,omitempty"`
-	Maintainers  []string `yaml:"maintainers,omitempty"`
-	RepoNames    []string `yaml:"repo_names,omitempty"`
-	ParentTeamID *int64   `yaml:"parent_team_id,omitempty"`
-	Privacy      string   `yaml:"privacy,omitempty"`
+	Id          string
+	Name        string   `yaml:"name"`
+	Description string   `yaml:"description,omitempty"`
+	Maintainers []string `yaml:"maintainers,omitempty"`
+	RepoNames   []string `yaml:"repo_names,omitempty"`
+	ParentTeam  string   `yaml:"parent_team,omitempty"`
+	Privacy     string   `yaml:"privacy,omitempty"`
 
 	Members []teamMember `yaml:"members,omitempty"`
 }
@@ -80,7 +80,7 @@ func syncOrgTeams(org organization) {
 		t := github.NewTeam{}
 		copier.Copy(&t, &team)
 
-		teamId, teamErr := getTeamId(currentTeams, slug(team.Name))
+		teamId, teamErr := getParentTeamId(org, slug(team.ParentTeam))
 		if teamErr == nil {
 			t.ParentTeamID = &teamId
 		}
@@ -159,11 +159,10 @@ func deletedMembers(current []teamMember, users []*github.User) []github.User {
 	return diff
 }
 
-func getTeamId(teams []*github.Team, slug string) (int64, error) {
-	for _, t := range teams {
-		if *t.Slug == slug {
-			return *t.ID, nil
-		}
+func getParentTeamId(org organization, slug string) (int64, error) {
+	team, _, err := client.Teams.GetTeamBySlug(ctx, org.Name, slug)
+	if err != nil {
+		return -1, err
 	}
-	return -1, errors.New("No team found")
+	return *team.ID, nil
 }

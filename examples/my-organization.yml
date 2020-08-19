@@ -13,7 +13,7 @@ organizations:
         repo_names:
           - "stark-industries/jarvis"
         privacy: "secret"
-        # parent_team_id: a-parent-team-id
+        # parent_team: a-parent-team-slug
     repositories:
       - name: "jarvis"
         description: "best AI ever"
@@ -31,7 +31,7 @@ bases:
       allow_rebase_merge: false
       delete_branch_on_merge: true
       branches:
-        - name: "master"
+        master:
           protection:
             enforce_admins: true
             required_status_checks:
