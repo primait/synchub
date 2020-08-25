@@ -62,6 +62,10 @@ func processOrg(org organization) {
 }
 
 func syncOrgTeams(org organization) {
+	if len(org.Teams) == 0 {
+		return
+	}
+
 	currentTeams, _, _ := client.Teams.ListTeams(ctx, org.Name, &github.ListOptions{})
 
 	deletedTeams := deletedTeams(org.Teams, currentTeams)
