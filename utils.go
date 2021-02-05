@@ -8,6 +8,10 @@ import (
 )
 
 func askForConfirmation(message string) bool {
+	if isCI {
+		return true
+	}
+
 	fmt.Println(message)
 	var response string
 	_, err := fmt.Scanln(&response)
