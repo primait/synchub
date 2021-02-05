@@ -16,6 +16,7 @@ import (
 
 var (
 	v           bool
+	isCI        bool
 	currentUser string
 	ctx         = context.Background()
 	client      *github.Client
@@ -28,11 +29,14 @@ type Sync struct {
 	repos         string
 	verbose       bool
 	confirmPublic bool
+	skipPublic    bool
+	isCI          bool
 }
 
 // Exec function parse and process yaml file(s)
 func (s *Sync) Exec() {
 	v = s.verbose
+	isCI = s.isCI
 	client = newGithubClient(s.token)
 	var parsedFiles []*file
 
@@ -61,6 +65,10 @@ func (s *Sync) Exec() {
 				continue
 			}
 
+			if s.skipPublic && !*repo.Private {
+				continue
+			}
+
 			sp.Suffix = fmt.Sprintf("Sync repository %s", repo.Name)
 
 			logIfVerbose(fmt.Sprintf("Sync repository %s...", repo.Name))
@@ -76,6 +84,10 @@ func (s *Sync) Exec() {
 
 			for _, orgRepo := range org.Repositories {
 				if restrictedRepos[0] != "" && !stringInSlice(orgRepo.Name, restrictedRepos) {
+					continue
+				}
+
+				if s.skipPublic && !*orgRepo.Private {
 					continue
 				}
 

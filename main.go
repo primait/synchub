@@ -39,6 +39,10 @@ func commands() []*cli.Command {
 					Name:  "confirm-public",
 					Usage: "ask confirmation when repository is public",
 				},
+				&cli.BoolFlag{
+					Name:  "skip-public",
+					Usage: "ignore every public repositories",
+				},
 				&cli.StringFlag{
 					Name:    "repos",
 					Usage:   "restrict sync to one or more defined repo, separated by commas",
@@ -54,6 +58,11 @@ func flags() []cli.Flag {
 		&cli.BoolFlag{
 			Name:    "verbose",
 			Aliases: []string{"vvv"},
+		},
+		&cli.BoolFlag{
+			Name:    "ci",
+			Usage:   "don't ask for prompts",
+			EnvVars: []string{"CI"},
 		},
 		&cli.StringFlag{
 			Name:     "token",
@@ -72,6 +81,8 @@ func runSync(c *cli.Context) error {
 		repos:         c.String("repos"),
 		verbose:       c.Bool("verbose"),
 		confirmPublic: c.Bool("confirm-public"),
+		skipPublic:    c.Bool("skip-public"),
+		isCI:          c.Bool("ci"),
 	}
 	sync.Exec()
 	return nil
