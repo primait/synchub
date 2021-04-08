@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"reflect"
 
 	"github.com/google/go-github/v31/github"
 	"github.com/imdario/mergo"
@@ -26,8 +25,8 @@ type repository struct {
 
 	Branches map[string]branch `yaml:"branches" json:"branches,omitempty"`
 
-	Collaborators []*collaborator `yaml:"collaborators" json:"collaborators,omitempty"`
-	Hooks         []hook          `yaml:"hooks" json:"hooks,omitempty"`
+	Collaborators map[string]*collaborator `yaml:"collaborators" json:"collaborators,omitempty"`
+	Hooks         []hook                   `yaml:"hooks" json:"hooks,omitempty"`
 
 	InheritFrom string `yaml:"inherit_from"`
 }
@@ -67,9 +66,8 @@ type branchRestriction struct {
 }
 
 type collaborator struct {
-	Name       *string `yaml:"name" json:"name,omitempty"`
-	Permission string  `yaml:"permission" json:"permission,omitempty"`
-	IsTeam     *bool   `yaml:"is_team" json:"is_team,omitempty"`
+	Permission string `yaml:"permission" json:"permission,omitempty"`
+	IsTeam     *bool  `yaml:"is_team" json:"is_team,omitempty"`
 }
 
 func appendBaseToRepo(repo *repository, parsedFiles []*file) {
@@ -153,11 +151,11 @@ func syncBranch(repo string, org string, branches map[string]branch) {
 	}
 }
 
-func syncCollaborators(repo string, org string, collaborators []*collaborator) {
+func syncCollaborators(repo string, org string, collaborators map[string]*collaborator) {
 	currentCollaborators, _, _ := client.Repositories.ListCollaborators(ctx, org, repo, &github.ListCollaboratorsOptions{Affiliation: "direct", ListOptions: github.ListOptions{PerPage: 500}})
 	currentTeamsCollaborators, _, _ := client.Repositories.ListTeams(ctx, org, repo, &github.ListOptions{PerPage: 500})
 
-	teamsDiff := difference(getTeamNames(currentTeamsCollaborators), getTeamNames(collaborators))
+	teamsDiff := difference(getGithubTeamNames(currentTeamsCollaborators), getTeamNames(collaborators))
 	for _, d := range teamsDiff {
 		logIfVerbose(fmt.Sprintf("Remove team %s from collaborators on %s\n", d, repo))
 		_, err := client.Teams.RemoveTeamRepoBySlug(ctx, org, d, org, repo)
@@ -166,7 +164,7 @@ func syncCollaborators(repo string, org string, collaborators []*collaborator) {
 		}
 	}
 
-	collabDiff := difference(getCollaboratorNames(currentCollaborators), getCollaboratorNames(collaborators))
+	collabDiff := difference(getGithubCollaboratorNames(currentCollaborators), getCollaboratorNames(collaborators))
 	for _, d := range collabDiff {
 		logIfVerbose(fmt.Sprintf("Remove user %s from collaborators on %s\n", d, repo))
 		_, err := client.Repositories.RemoveCollaborator(ctx, org, repo, d)
@@ -176,15 +174,15 @@ func syncCollaborators(repo string, org string, collaborators []*collaborator) {
 	}
 
 	logIfVerbose(fmt.Sprintf("Sync collaborators on repo %s\n", repo))
-	for _, collaborator := range collaborators {
-		logIfVerbose(fmt.Sprintf("Add %s as collaborator on repo %s\n", *collaborator.Name, repo))
+	for collaboratorName, collaborator := range collaborators {
+		logIfVerbose(fmt.Sprintf("Add %s as collaborator on repo %s\n", collaboratorName, repo))
 
 		if collaborator.IsTeam != nil && *collaborator.IsTeam {
 			opts := github.TeamAddTeamRepoOptions{
 				Permission: collaborator.Permission,
 			}
 
-			_, err := client.Teams.AddTeamRepoBySlug(ctx, org, *collaborator.Name, org, repo, &opts)
+			_, err := client.Teams.AddTeamRepoBySlug(ctx, org, collaboratorName, org, repo, &opts)
 			if err != nil {
 				fmt.Println("An error occurred:", err)
 			}
@@ -193,7 +191,7 @@ func syncCollaborators(repo string, org string, collaborators []*collaborator) {
 				Permission: collaborator.Permission,
 			}
 
-			_, _, err := client.Repositories.AddCollaborator(ctx, org, repo, *collaborator.Name, &opts)
+			_, _, err := client.Repositories.AddCollaborator(ctx, org, repo, collaboratorName, &opts)
 			if err != nil {
 				fmt.Println("An error occurred:", err)
 			}
@@ -201,33 +199,33 @@ func syncCollaborators(repo string, org string, collaborators []*collaborator) {
 	}
 }
 
-func getTeamNames(teams interface{}) (res []string) {
-	s := reflect.ValueOf(teams)
-	for i := 0; i < s.Len(); i++ {
-		j := reflect.Indirect(s.Index(i))
-		switch teams.(type) {
-		case []*github.Team:
-			res = append(res, j.FieldByName("Slug").Elem().String())
-		case []*collaborator:
-			if !reflect.ValueOf(j.FieldByName("IsTeam").Elem()).IsZero() && j.FieldByName("IsTeam").Elem().Bool() {
-				res = append(res, j.FieldByName("Name").Elem().String())
-			}
+func getGithubTeamNames(teams []*github.Team) (res []string) {
+	for _, team := range teams {
+		res = append(res, *team.Slug)
+	}
+	return
+}
+
+func getTeamNames(teams map[string]*collaborator) (res []string) {
+	for name, team := range teams {
+		if team.IsTeam != nil && *team.IsTeam {
+			res = append(res, name)
 		}
 	}
 	return
 }
 
-func getCollaboratorNames(collaborators interface{}) (res []string) {
-	s := reflect.ValueOf(collaborators)
-	for i := 0; i < s.Len(); i++ {
-		j := reflect.Indirect(s.Index(i))
-		switch collaborators.(type) {
-		case []*github.User:
-			res = append(res, j.FieldByName("Login").Elem().String())
-		case []*collaborator:
-			if reflect.ValueOf(j.FieldByName("IsTeam").Elem()).IsZero() || !j.FieldByName("IsTeam").Elem().Bool() {
-				res = append(res, j.FieldByName("Name").Elem().String())
-			}
+func getGithubCollaboratorNames(users []*github.User) (res []string) {
+	for _, user := range users {
+		res = append(res, *user.Login)
+	}
+	return
+}
+
+func getCollaboratorNames(collaborators map[string]*collaborator) (res []string) {
+	for name, collaborators := range collaborators {
+		if collaborators.IsTeam == nil || !*collaborators.IsTeam {
+			res = append(res, name)
 		}
 	}
 	return

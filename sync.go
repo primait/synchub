@@ -95,6 +95,10 @@ func (s *Sync) Exec() {
 
 				logIfVerbose(fmt.Sprintf("Sync repo %s on organization %s...", orgRepo.Name, org.Name))
 				appendBaseToRepo(&orgRepo, parsedFiles)
+
+				for name, col := range orgRepo.Collaborators {
+					fmt.Println("User:", name, ", permission: ", col.Permission)
+				}
 				processRepo(orgRepo, org.Name, s.confirmPublic)
 			}
 		}
