@@ -80,7 +80,7 @@ func (s *Sync) Exec() {
 			sp.Suffix = fmt.Sprintf("Sync organization %s...", org.Name)
 
 			logIfVerbose(fmt.Sprintf("Sync organization %s...", org.Name))
-			// processOrg(org)
+			processOrg(org)
 
 			for _, orgRepo := range org.Repositories {
 				if restrictedRepos[0] != "" && !stringInSlice(orgRepo.Name, restrictedRepos) {
@@ -99,7 +99,7 @@ func (s *Sync) Exec() {
 				for name, col := range orgRepo.Collaborators {
 					fmt.Println("User:", name, ", permission: ", col.Permission)
 				}
-				// processRepo(orgRepo, org.Name, s.confirmPublic)
+				processRepo(orgRepo, org.Name, s.confirmPublic)
 			}
 		}
 

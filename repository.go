@@ -27,7 +27,7 @@ type repository struct {
 	Branches map[string]branch `yaml:"branches" json:"branches,omitempty"`
 
 	Collaborators map[string]*collaborator `yaml:"collaborators" json:"collaborators,omitempty"`
-	Hooks         []hook          `yaml:"hooks" json:"hooks,omitempty"`
+	Hooks         []hook                   `yaml:"hooks" json:"hooks,omitempty"`
 
 	InheritFrom string `yaml:"inherit_from"`
 }
@@ -67,8 +67,8 @@ type branchRestriction struct {
 }
 
 type collaborator struct {
-	Permission string  `yaml:"permission" json:"permission,omitempty"`
-	IsTeam     *bool   `yaml:"is_team" json:"is_team,omitempty"`
+	Permission string `yaml:"permission" json:"permission,omitempty"`
+	IsTeam     *bool  `yaml:"is_team" json:"is_team,omitempty"`
 }
 
 func appendBaseToRepo(repo *repository, parsedFiles []*file) {
