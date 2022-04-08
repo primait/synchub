@@ -33,7 +33,7 @@ steps:
     commands:
       - go get github.com/mitchellh/gox
       - go get github.com/tcnksm/ghr
-      - gox -output "dist/synchub_{{.OS}}_{{.Arch}}"
+      - gox -output "dist/synchub_{{.OS}}_{{.Arch}}" -osarch="darwin/amd64 linux/amd64"
       - ghr $DRONE_TAG dist/
     when:
       event:
