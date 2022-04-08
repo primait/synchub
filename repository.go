@@ -22,6 +22,7 @@ type repository struct {
 	AllowMergeCommit    *bool  `yaml:"allow_merge_commit" json:"allow_merge_commit,omitempty"`
 	AllowRebaseMerge    *bool  `yaml:"allow_rebase_merge" json:"allow_rebase_merge,omitempty"`
 	DeleteBranchOnMerge *bool  `yaml:"delete_branch_on_merge" json:"delete_branch_on_merge,omitempty"`
+	AutoInit            *bool  `yaml:"auto_init" json:"auto_init,omitempty"`
 
 	Branches map[string]branch `yaml:"branches" json:"branches,omitempty"`
 
@@ -93,6 +94,11 @@ func appendBaseToRepo(repo *repository, parsedFiles []*file) {
 }
 
 func processRepo(repo repository, org string, confirmPublic bool) {
+	if repo.AutoInit == nil {
+		autoInit := true
+		repo.AutoInit = &autoInit
+	}
+
 	t := github.Repository{}
 	copier.Copy(&t, &repo)
 
